@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "606937997717",
+    "project_id": "lifter-63e9e",
+    "storage_bucket": "lifter-63e9e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:606937997717:android:640722bda6663ac315569c",
+        "android_client_info": {
+          "package_name": "com.example.lifter_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "606937997717-ep65kpg519r67gv6fn2r399onimb75ee.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.lifter_app",
+            "certificate_hash": "e05ab729335d0c24e6fef4743a23bfc2a5c083b8"
+          }
+        },
+        {
+          "client_id": "606937997717-3tqotg6hjdej478gb0ka5jo2r5gjshmn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDP2ARAcAIBL3vYBFqtWkuiz2W2d-tZSes"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "606937997717-3tqotg6hjdej478gb0ka5jo2r5gjshmn.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

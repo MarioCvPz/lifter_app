@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/app_store.dart';
+import '../../widgets/help.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,10 +13,11 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
-  final _email = TextEditingController(text: 'mario@socialgym.app');
-  final _password = TextEditingController(text: '123456');
+  final _email = TextEditingController();
+  final _password = TextEditingController();
   bool _registerMode = false;
   bool _obscure = true;
+  bool _busy = false;
   String? _error;
 
   @override
@@ -26,20 +28,66 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
+    if (_busy) return;
     setState(() => _error = null);
     if (!_formKey.currentState!.validate()) return;
 
+    setState(() => _busy = true);
     final store = SessionScope.of(context);
     final error = _registerMode
-        ? store.register(
+        ? await store.register(
             name: _name.text,
             email: _email.text,
             password: _password.text,
           )
-        : store.login(email: _email.text, password: _password.text);
+        : await store.login(email: _email.text, password: _password.text);
 
-    if (error != null) setState(() => _error = error);
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _error = error;
+    });
+  }
+
+  Future<void> _resetPassword() async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    final error = await SessionScope.of(context).resetPassword(_email.text);
+
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _error = error;
+    });
+    if (error == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Te hemos enviado un correo a ${_email.text.trim()} para '
+            'cambiar la contraseña. Revisa también la carpeta de spam.',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _google() async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    final error = await SessionScope.of(context).signInWithGoogle();
+
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _error = error;
+    });
   }
 
   @override
@@ -47,6 +95,10 @@ class _LoginScreenState extends State<LoginScreen> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        actions: const [HelpButton(HelpTopic.login)],
+      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -78,7 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 8),
                     Text(
                       _registerMode
-                          ? 'Crea una cuenta de prueba (sin servidor).'
+                          ? 'Crea tu cuenta para guardar tus datos.'
                           : 'Entrenamientos, rutinas y nutrición en un solo sitio.',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -139,16 +191,49 @@ class _LoginScreenState extends State<LoginScreen> {
                         return null;
                       },
                     ),
+                    if (!_registerMode)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: _busy ? null : _resetPassword,
+                          child: const Text('¿Has olvidado tu contraseña?'),
+                        ),
+                      ),
                     if (_error != null) ...[
                       const SizedBox(height: 12),
                       Text(_error!, style: TextStyle(color: scheme.error)),
                     ],
                     const SizedBox(height: 20),
                     FilledButton(
-                      onPressed: _submit,
-                      child: Text(
-                        _registerMode ? 'Crear cuenta' : 'Iniciar sesión',
-                      ),
+                      onPressed: _busy ? null : _submit,
+                      child: _busy
+                          ? const SizedBox.square(
+                              dimension: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(
+                              _registerMode ? 'Crear cuenta' : 'Iniciar sesión',
+                            ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        const Expanded(child: Divider()),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            'o',
+                            style: TextStyle(color: scheme.onSurfaceVariant),
+                          ),
+                        ),
+                        const Expanded(child: Divider()),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    OutlinedButton.icon(
+                      onPressed: _busy ? null : _google,
+                      icon: const Icon(Icons.g_mobiledata, size: 28),
+                      label: const Text('Continuar con Google'),
                     ),
                     const SizedBox(height: 8),
                     TextButton(
@@ -164,8 +249,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Login de demostración: no hay Firebase ni Google. '
-                      'Los datos se quedan en memoria y se pierden al cerrar la app.',
+                      'Tus entrenamientos, rutinas y comidas se guardan en tu '
+                      'cuenta y se sincronizan entre dispositivos.',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: scheme.onSurfaceVariant,

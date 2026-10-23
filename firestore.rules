@@ -1,0 +1,74 @@
+rules_version = '2';
+
+// Roles (campo `role` en users/{uid}): "user" (por defecto), "trainer", "admin".
+// - Nadie puede ponerse ni cambiarse el rol desde la app.
+// - Solo un admin puede cambiar el rol de otro usuario.
+// - El primer admin se pone a mano desde la consola de Firebase.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function myRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid))
+        .data.get('role', 'user');
+    }
+
+    function hasProfile() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isAdmin() {
+      return signedIn() && hasProfile() && myRole() == 'admin';
+    }
+
+    function isTrainer() {
+      return signedIn() && hasProfile() && myRole() in ['trainer', 'admin'];
+    }
+
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    match /users/{uid} {
+      // Cada uno ve su perfil; entrenadores y admins ven la lista de usuarios.
+      allow read: if signedIn() && (request.auth.uid == uid || isTrainer());
+
+      // Al registrarse, el perfil no puede traer rol.
+      allow create: if signedIn() && request.auth.uid == uid
+        && !('role' in request.resource.data);
+
+      allow update: if signedIn() && (
+        // El propio usuario edita su perfil, pero nunca el rol.
+        (request.auth.uid == uid && !changedKeys().hasAny(['role']))
+        // Un admin solo puede cambiar el rol de otro usuario.
+        || (isAdmin() && request.auth.uid != uid
+            && changedKeys().hasOnly(['role'])
+            && request.resource.data.role in ['user', 'trainer', 'admin'])
+      );
+
+      allow delete: if false;
+
+      // Entrenos, rutinas propias y nutrición: solo el dueño (y admins leen).
+      match /{document=**} {
+        allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+        allow write: if signedIn() && request.auth.uid == uid;
+      }
+    }
+
+    // Rutinas que un entrenador asigna a un usuario.
+    match /assignedRoutines/{id} {
+      allow read: if signedIn() && (
+        resource.data.userId == request.auth.uid
+        || resource.data.trainerId == request.auth.uid
+        || isAdmin()
+      );
+      allow create: if isTrainer()
+        && request.resource.data.trainerId == request.auth.uid;
+      allow update, delete: if (isTrainer()
+        && resource.data.trainerId == request.auth.uid) || isAdmin();
+    }
+  }
+}

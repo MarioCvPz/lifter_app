@@ -16,7 +16,7 @@ class SocialGymApp extends StatefulWidget {
 }
 
 class _SocialGymAppState extends State<SocialGymApp> {
-  late final AppStore _store = widget.store ?? AppStore();
+  late final AppStore _store = widget.store ?? (AppStore()..start());
 
   @override
   void dispose() {
@@ -36,7 +36,7 @@ class _SocialGymAppState extends State<SocialGymApp> {
           return MaterialApp(
             title: 'SocialGym',
             debugShowCheckedModeBanner: false,
-            theme: AppTheme.light(),
+            theme: AppTheme.dark(),
             locale: const Locale('es'),
             supportedLocales: const [Locale('es'), Locale('en')],
             localizationsDelegates: const [
@@ -44,7 +44,13 @@ class _SocialGymAppState extends State<SocialGymApp> {
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
             ],
-            home: _store.isLoggedIn ? const MainShell() : const LoginScreen(),
+            home: _store.loading
+                ? const Scaffold(
+                    body: Center(child: CircularProgressIndicator()),
+                  )
+                : _store.isLoggedIn
+                ? const MainShell()
+                : const LoginScreen(),
           );
         },
       ),
