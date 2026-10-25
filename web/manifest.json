@@ -1,11 +1,11 @@
 {
-    "name": "lifter_app",
-    "short_name": "lifter_app",
+    "name": "SocialGym",
+    "short_name": "SocialGym",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#111319",
+    "theme_color": "#FF6B4A",
+    "description": "SocialGym: entrenamientos, rutinas y nutrición.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

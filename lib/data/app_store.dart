@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -390,26 +391,35 @@ class AppStore extends ChangeNotifier {
   /// usuario cierra el selector de cuentas.
   Future<String?> signInWithGoogle() async {
     try {
-      // En Android el ID de cliente sale de google-services.json.
-      if (!_googleReady) {
-        await GoogleSignIn.instance.initialize();
-        _googleReady = true;
+      final UserCredential cred;
+      if (kIsWeb) {
+        // En web, google_sign_in no permite authenticate(): se usa la
+        // ventana emergente de Firebase.
+        cred = await _auth.signInWithPopup(GoogleAuthProvider());
+      } else {
+        // En Android el ID de cliente sale de google-services.json.
+        if (!_googleReady) {
+          await GoogleSignIn.instance.initialize();
+          _googleReady = true;
+        }
+        final account = await GoogleSignIn.instance.authenticate();
+        final idToken = account.authentication.idToken;
+        if (idToken == null) return 'Google no devolvió credenciales.';
+        cred = await _auth.signInWithCredential(
+          GoogleAuthProvider.credential(idToken: idToken),
+        );
       }
-      final account = await GoogleSignIn.instance.authenticate();
-      final idToken = account.authentication.idToken;
-      if (idToken == null) return 'Google no devolvió credenciales.';
 
-      final cred = await _auth.signInWithCredential(
-        GoogleAuthProvider.credential(idToken: idToken),
-      );
       if (cred.additionalUserInfo?.isNewUser ?? false) {
-        final name = account.displayName ?? account.email.split('@').first;
+        final fbUser = cred.user!;
+        final email = fbUser.email ?? '';
+        final name = fbUser.displayName ?? email.split('@').first;
         final profile = UserProfile(
           name: name,
           username: _usernameFrom(name),
-          email: account.email,
+          email: email,
         );
-        await _userDoc(cred.user!.uid).set(profile.toMap());
+        await _userDoc(fbUser.uid).set(profile.toMap());
       }
       return null;
     } on GoogleSignInException catch (e) {
@@ -425,6 +435,15 @@ class AppStore extends ChangeNotifier {
               '${e.description ?? e.code.name}';
       }
     } on FirebaseAuthException catch (e) {
+      // Cerrar la ventana emergente en web no es un error.
+      if (e.code == 'popup-closed-by-user' ||
+          e.code == 'cancelled-popup-request') {
+        return null;
+      }
+      if (e.code == 'popup-blocked') {
+        return 'El navegador ha bloqueado la ventana de Google. Permite las '
+            'ventanas emergentes para esta página.';
+      }
       return _authMessage(e);
     } on FirebaseException catch (e) {
       return 'No se pudo guardar el perfil: ${e.message ?? e.code}';
