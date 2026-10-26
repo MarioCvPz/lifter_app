@@ -1,11 +1,11 @@
 {
-    "name": "SocialGym",
-    "short_name": "SocialGym",
+    "name": "LiFTeR+",
+    "short_name": "LiFTeR+",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#111319",
     "theme_color": "#FF6B4A",
-    "description": "SocialGym: entrenamientos, rutinas y nutrición.",
+    "description": "LiFTeR+: entrenamientos, rutinas y nutrición.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

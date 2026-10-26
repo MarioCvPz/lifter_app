@@ -6,16 +6,16 @@ import 'screens/auth/login_screen.dart';
 import 'screens/shell/main_shell.dart';
 import 'theme/app_theme.dart';
 
-class SocialGymApp extends StatefulWidget {
-  const SocialGymApp({super.key, this.store});
+class LifterApp extends StatefulWidget {
+  const LifterApp({super.key, this.store});
 
   final AppStore? store;
 
   @override
-  State<SocialGymApp> createState() => _SocialGymAppState();
+  State<LifterApp> createState() => _LifterAppState();
 }
 
-class _SocialGymAppState extends State<SocialGymApp> {
+class _LifterAppState extends State<LifterApp> {
   late final AppStore _store = widget.store ?? (AppStore()..start());
 
   @override
@@ -34,7 +34,7 @@ class _SocialGymAppState extends State<SocialGymApp> {
         listenable: _store,
         builder: (context, _) {
           return MaterialApp(
-            title: 'SocialGym',
+            title: 'LiFTeR+',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.dark(),
             locale: const Locale('es'),

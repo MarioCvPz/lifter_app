@@ -46,7 +46,7 @@ class BrandAppBar extends StatelessWidget implements PreferredSizeWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'SOCIALGYM',
+                'LiFTeR+',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: scheme.secondary,
                   letterSpacing: 1.2,
