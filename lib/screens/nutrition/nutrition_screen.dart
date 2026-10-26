@@ -182,54 +182,77 @@ class _NutritionScreenState extends State<NutritionScreen> {
   }
 
   Future<void> _addFood(AppStore store, Food food) async {
-    final grams = TextEditingController(text: '100');
-    final ok = await showDialog<bool>(
+    final g = await showDialog<double>(
       context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: Text(food.name),
-          content: TextField(
-            controller: grams,
-            autofocus: true,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'Cantidad (gramos)'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Añadir'),
-            ),
-          ],
-        );
-      },
+      builder: (_) => _GramsDialog(food: food),
     );
+    if (g == null || g <= 0) return;
 
-    if (ok == true) {
-      final g = double.tryParse(grams.text.replaceAll(',', '.')) ?? 0;
-      if (g > 0) {
-        // Se apunta en el día que se está viendo, con la hora actual.
-        final now = DateTime.now();
-        store.addNutrition(
-          NutritionEntry(
-            id: now.millisecondsSinceEpoch.toString(),
-            food: food,
-            grams: g,
-            date: DateTime(
-              _day.year,
-              _day.month,
-              _day.day,
-              now.hour,
-              now.minute,
-              now.second,
-            ),
-          ),
-        );
-      }
-    }
-    grams.dispose();
+    // Se apunta en el día que se está viendo, con la hora actual.
+    final now = DateTime.now();
+    store.addNutrition(
+      NutritionEntry(
+        id: now.millisecondsSinceEpoch.toString(),
+        food: food,
+        grams: g,
+        date: DateTime(
+          _day.year,
+          _day.month,
+          _day.day,
+          now.hour,
+          now.minute,
+          now.second,
+        ),
+      ),
+    );
+  }
+}
+
+/// Pide los gramos de un alimento. Devuelve null si se cancela.
+///
+/// El controlador vive en el State del diálogo para liberarlo cuando el
+/// diálogo ya se ha cerrado del todo (no al acabar showDialog, que vuelve
+/// antes de que termine la animación de cierre).
+class _GramsDialog extends StatefulWidget {
+  const _GramsDialog({required this.food});
+
+  final Food food;
+
+  @override
+  State<_GramsDialog> createState() => _GramsDialogState();
+}
+
+class _GramsDialogState extends State<_GramsDialog> {
+  final _grams = TextEditingController(text: '100');
+
+  @override
+  void dispose() {
+    _grams.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    Navigator.pop(context, double.tryParse(_grams.text.replaceAll(',', '.')));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.food.name),
+      content: TextField(
+        controller: _grams,
+        autofocus: true,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        decoration: const InputDecoration(labelText: 'Cantidad (gramos)'),
+        onSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(onPressed: _submit, child: const Text('Añadir')),
+      ],
+    );
   }
 }

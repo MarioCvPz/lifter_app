@@ -27,7 +27,6 @@ LiFTeR+ es una app para registrar entrenamientos, seguir rutinas y controlar la 
 | Flutter / Dart | Aplicación multiplataforma |
 | `firebase_auth` + `google_sign_in` | Autenticación (correo y Google) |
 | `cloud_firestore` | Base de datos en tiempo real |
-| `flutter_localizations` | Localización al español |
 | Plus Jakarta Sans | Tipografía (en `assets/fonts`) |
 
 El estado se gestiona con `ChangeNotifier` + `InheritedNotifier` de Flutter, sin paquetes externos.
@@ -90,7 +89,7 @@ assignedRoutines/{id}            # Rutinas que un entrenador asigna a un usuario
     userId, userName, createdAt
 ```
 
-Los ejercicios, los alimentos y las plantillas **no se guardan en la base de datos**: están en [`lib/data/catalog.dart`](lib/data/catalog.dart).
+Los ejercicios, los alimentos y las plantillas **no se guardan en la base de datos**: están en [`lib/data/catalog.dart`](lib/data/catalog.dart). (Más adelante se gestionarán desde firebase)
 
 
 ## Próximos pasos

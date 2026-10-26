@@ -11,96 +11,118 @@ Future<Routine?> showRoutineEditor(
   BuildContext context, {
   String title = 'Nueva rutina',
   String templateName = 'Personal',
-}) async {
-  final name = TextEditingController();
-  final description = TextEditingController();
-  final selected = <Exercise>[];
-
-  final created = await showDialog<bool>(
+}) {
+  return showDialog<Routine>(
     context: context,
-    builder: (ctx) {
-      return StatefulBuilder(
-        builder: (ctx, setLocal) {
-          return AlertDialog(
-            title: Text(title),
-            content: SizedBox(
-              width: 420,
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    TextField(
-                      controller: name,
-                      onChanged: (_) => setLocal(() {}),
-                      decoration: const InputDecoration(labelText: 'Nombre'),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: description,
-                      maxLines: 2,
-                      decoration: const InputDecoration(
-                        labelText: 'Descripción (opcional)',
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        '${selected.length} ejercicios elegidos',
-                        style: Theme.of(ctx).textTheme.bodySmall,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    for (final ex in exerciseCatalog)
-                      CheckboxListTile(
-                        dense: true,
-                        value: selected.contains(ex),
-                        title: Text(ex.name),
-                        subtitle: Text(ex.muscleGroup),
-                        onChanged: (v) {
-                          setLocal(() {
-                            if (v == true) {
-                              selected.add(ex);
-                            } else {
-                              selected.remove(ex);
-                            }
-                          });
-                        },
-                      ),
-                  ],
+    builder: (_) =>
+        _RoutineEditorDialog(title: title, templateName: templateName),
+  );
+}
+
+/// Los controladores viven en el State del diálogo para liberarlos cuando
+/// el diálogo ya se ha cerrado del todo (no al acabar showDialog, que vuelve
+/// antes de que termine la animación de cierre).
+class _RoutineEditorDialog extends StatefulWidget {
+  const _RoutineEditorDialog({required this.title, required this.templateName});
+
+  final String title;
+  final String templateName;
+
+  @override
+  State<_RoutineEditorDialog> createState() => _RoutineEditorDialogState();
+}
+
+class _RoutineEditorDialogState extends State<_RoutineEditorDialog> {
+  final _name = TextEditingController();
+  final _description = TextEditingController();
+  final _selected = <Exercise>[];
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _description.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    Navigator.pop(
+      context,
+      Routine(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: _name.text.trim(),
+        description: _description.text.trim(),
+        templateName: widget.templateName,
+        exercises: List.of(_selected),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: SizedBox(
+        width: 420,
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              TextField(
+                controller: _name,
+                onChanged: (_) => setState(() {}),
+                decoration: const InputDecoration(labelText: 'Nombre'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _description,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Descripción (opcional)',
                 ),
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Cancelar'),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '${_selected.length} ejercicios elegidos',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ),
-              FilledButton(
-                // Solo se puede guardar con nombre y al menos un ejercicio.
-                onPressed: name.text.trim().isEmpty || selected.isEmpty
-                    ? null
-                    : () => Navigator.pop(ctx, true),
-                child: const Text('Guardar'),
-              ),
+              const SizedBox(height: 12),
+              for (final ex in exerciseCatalog)
+                CheckboxListTile(
+                  dense: true,
+                  value: _selected.contains(ex),
+                  title: Text(ex.name),
+                  subtitle: Text(ex.muscleGroup),
+                  onChanged: (v) {
+                    setState(() {
+                      if (v == true) {
+                        _selected.add(ex);
+                      } else {
+                        _selected.remove(ex);
+                      }
+                    });
+                  },
+                ),
             ],
-          );
-        },
-      );
-    },
-  );
-
-  final routine = created == true
-      ? Routine(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          name: name.text.trim(),
-          description: description.text.trim(),
-          templateName: templateName,
-          exercises: List.of(selected),
-        )
-      : null;
-  name.dispose();
-  description.dispose();
-  return routine;
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          // Solo se puede guardar con nombre y al menos un ejercicio.
+          onPressed: _name.text.trim().isEmpty || _selected.isEmpty
+              ? null
+              : _save,
+          child: const Text('Guardar'),
+        ),
+      ],
+    );
+  }
 }
 
 void startWorkoutFrom(BuildContext context, Routine routine) {
