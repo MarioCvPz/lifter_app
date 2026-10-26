@@ -36,12 +36,12 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _busy = true);
     final store = SessionScope.of(context);
     final error = _registerMode
-        ? await store.register(
+        ? await store.auth.register(
             name: _name.text,
             email: _email.text,
             password: _password.text,
           )
-        : await store.login(email: _email.text, password: _password.text);
+        : await store.auth.login(email: _email.text, password: _password.text);
 
     if (!mounted) return;
     setState(() {
@@ -56,7 +56,9 @@ class _LoginScreenState extends State<LoginScreen> {
       _busy = true;
       _error = null;
     });
-    final error = await SessionScope.of(context).resetPassword(_email.text);
+    final error = await SessionScope.of(
+      context,
+    ).auth.resetPassword(_email.text);
 
     if (!mounted) return;
     setState(() {
@@ -81,7 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _busy = true;
       _error = null;
     });
-    final error = await SessionScope.of(context).signInWithGoogle();
+    final error = await SessionScope.of(context).auth.signInWithGoogle();
 
     if (!mounted) return;
     setState(() {

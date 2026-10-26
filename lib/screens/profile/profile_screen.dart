@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/achievements.dart';
 import '../../data/app_store.dart';
+import '../../data/stats.dart';
 import '../../models/models.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/brand.dart';
@@ -123,7 +124,7 @@ class ProfileScreen extends StatelessWidget {
             const SizedBox(height: 8),
           ],
           OutlinedButton.icon(
-            onPressed: store.logout,
+            onPressed: store.auth.logout,
             icon: const Icon(Icons.logout),
             label: const Text('Cerrar sesión'),
           ),

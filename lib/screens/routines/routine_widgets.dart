@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../data/app_store.dart';
+import '../../data/catalog.dart';
 import '../../models/models.dart';
 import '../../theme/app_theme.dart';
 import '../workouts/register_workout_screen.dart';
@@ -12,7 +12,6 @@ Future<Routine?> showRoutineEditor(
   String title = 'Nueva rutina',
   String templateName = 'Personal',
 }) async {
-  final store = SessionScope.of(context);
   final name = TextEditingController();
   final description = TextEditingController();
   final selected = <Exercise>[];
@@ -51,7 +50,7 @@ Future<Routine?> showRoutineEditor(
                       ),
                     ),
                     const SizedBox(height: 12),
-                    for (final ex in store.exercises)
+                    for (final ex in exerciseCatalog)
                       CheckboxListTile(
                         dense: true,
                         value: selected.contains(ex),

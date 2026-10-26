@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/app_store.dart';
+import '../../data/catalog.dart';
 import '../../models/models.dart';
 import '../../widgets/help.dart';
 
@@ -60,7 +61,6 @@ class _RegisterWorkoutScreenState extends State<RegisterWorkoutScreen> {
   }
 
   Future<void> _pickExercise() async {
-    final store = SessionScope.of(context);
     final chosen = await showModalBottomSheet<Exercise>(
       context: context,
       showDragHandle: true,
@@ -74,7 +74,7 @@ class _RegisterWorkoutScreenState extends State<RegisterWorkoutScreen> {
               controller: controller,
               children: [
                 const ListTile(title: Text('Catálogo de ejercicios')),
-                for (final ex in store.exercises)
+                for (final ex in exerciseCatalog)
                   ListTile(
                     title: Text(ex.name),
                     subtitle: Text('${ex.muscleGroup} · ${ex.equipment}'),

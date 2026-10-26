@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_store.dart';
+import 'stats.dart';
 
 /// Insignia que se consigue al llegar a [target] en algún dato del usuario.
 /// Se calculan al vuelo a partir de los entrenos, comidas y agua.

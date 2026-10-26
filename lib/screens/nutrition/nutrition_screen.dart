@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../data/app_store.dart';
+import '../../data/catalog.dart';
+import '../../data/stats.dart';
 import '../../models/models.dart';
 import '../../widgets/brand.dart';
 import '../../widgets/help.dart';
@@ -45,7 +47,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
     final targets = store.macroTargets();
     final logs = store.nutritionFor(_day);
     final q = _query.text.trim().toLowerCase();
-    final foods = store.foods
+    final foods = foodCatalog
         .where((f) => q.isEmpty || f.name.toLowerCase().contains(q))
         .toList();
 
