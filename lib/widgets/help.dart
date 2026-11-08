@@ -67,8 +67,9 @@ enum HelpTopic {
     (
       Icons.water_drop,
       'Agua',
-      'Pulsa + para sumar un vaso de 250 ml. El objetivo se calcula con tu '
-          'peso (35 ml por kg).',
+      'Pulsa + para sumar un vaso de 250 ml y − para quitarlo. Si te '
+          'equivocas, pulsa "Deshacer" en el aviso de abajo. El objetivo se '
+          'calcula con tu peso (35 ml por kg).',
     ),
   ]),
 
@@ -103,8 +104,8 @@ enum HelpTopic {
     (
       Icons.edit,
       'Nombre y duración',
-      'Ponle un nombre a la sesión. Si dejas la duración vacía, se usa el '
-          'tiempo desde que abriste esta pantalla.',
+      'Ponle un nombre a la sesión. Si dejas la duración vacía, se cuentan '
+          '5 minutos por cada ejercicio que apuntes.',
     ),
     (
       Icons.add_circle_outline,
@@ -161,7 +162,7 @@ enum HelpTopic {
       Icons.info_outline,
       'Nivel y duración',
       'El nivel es el del ejercicio más exigente. La duración es una '
-          'estimación de unos 10 minutos por ejercicio.',
+          'estimación de 5 minutos por ejercicio.',
     ),
   ]),
 
@@ -241,23 +242,47 @@ enum HelpTopic {
           'aparecerá en Rutinas → "De tu entrenador".',
     ),
     (
-      Icons.list_alt,
-      'Tus asignaciones',
-      'Aquí ves todas las rutinas que has asignado y para quién es cada una.',
+      Icons.groups,
+      'Tus usuarios',
+      'Un usuario pasa a ser tuyo cuando le asignas una rutina. Arriba eliges '
+          'el periodo (4, 8 o 12 semanas) y ves sus sesiones, el cumplimiento '
+          '(sesiones hechas frente a sus días por semana) y cuándo entrenó por '
+          'última vez.',
+    ),
+    (
+      Icons.person_search,
+      'Ficha',
+      'Toca un usuario para ver sus sesiones por semana, sus ejercicios más '
+          'hechos y las rutinas que le has asignado.',
+    ),
+    (
+      Icons.download,
+      'Informes',
+      'Con el botón de descarga sacas un Excel (tablas por usuario, por '
+          'semana, entrenos y ejercicios) o un PDF con gráficas del periodo '
+          'elegido.',
     ),
     (
       Icons.delete_outline,
-      'Borrar',
-      'Con la papelera borras una rutina asignada; el usuario deja de verla.',
+      'Asignadas',
+      'En la pestaña "Asignadas" ves todas tus rutinas asignadas. Con la '
+          'papelera borras una; el usuario deja de verla.',
     ),
   ]),
 
   admin('Cómo funciona la administración', [
     (
+      Icons.insights,
+      'Resumen',
+      'Usuarios por rol, usuarios activos, entrenos de la semana, tamaño del '
+          'catálogo, ejercicios más usados y quién lleva 2 semanas sin '
+          'entrenar.',
+    ),
+    (
       Icons.groups,
       'Usuarios',
-      'Arriba ves cuántos usuarios hay de cada rol. Busca por nombre o '
-          'correo y desliza hacia abajo (o pulsa ↻) para recargar.',
+      'Busca por nombre o correo y desliza hacia abajo (o pulsa ↻) para '
+          'recargar.',
     ),
     (
       Icons.manage_accounts,
@@ -270,6 +295,13 @@ enum HelpTopic {
       'Tu propio rol',
       'No puedes cambiarte el rol a ti mismo. El primer admin se pone desde '
           'la consola de Firebase.',
+    ),
+    (
+      Icons.restaurant_menu,
+      'Catálogo',
+      'Alimentos, ejercicios y plantillas de rutina que ve todo el mundo. '
+          'Toca uno para editarlo, "Añadir" para crear y la papelera para '
+          'borrar. Si está vacío, pulsa "Cargar catálogo inicial".',
     ),
   ]);
 

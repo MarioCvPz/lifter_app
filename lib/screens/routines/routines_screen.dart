@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../data/app_store.dart';
-import '../../data/catalog.dart';
 import '../../data/stats.dart';
 import '../../models/models.dart';
 import '../../theme/app_theme.dart';
@@ -47,14 +46,17 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
   }
 
   Future<void> _createRoutine(AppStore store) async {
-    final routine = await showRoutineEditor(context);
+    final routine = await showRoutineEditor(
+      context,
+      exercises: store.exercises,
+    );
     if (routine != null) store.addRoutine(routine);
   }
 
   @override
   Widget build(BuildContext context) {
     final store = SessionScope.of(context);
-    final groups = {for (final e in exerciseCatalog) e.muscleGroup}.toList();
+    final groups = store.muscleGroups;
     final templates = store.routines
         .where((r) => r.isTemplate && _matches(r))
         .toList();

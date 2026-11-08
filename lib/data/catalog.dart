@@ -1,169 +1,68 @@
+import 'dart:convert';
+
+import 'package:flutter/services.dart';
+
 import '../models/models.dart';
 
-// Catálogo fijo de la app: no se guarda en Firestore, va en el código.
+// El catálogo (ejercicios, alimentos y plantillas de rutina) vive en Firestore,
+// en las colecciones `exercises`, `foods` y `routineTemplates`. La app lo lee
+// desde AppStore y los admins lo editan desde su panel.
+//
+// Este archivo solo sirve para la carga inicial: lee los datos de
+// assets/seed/catalog.json para que un admin los suba con un botón cuando la
+// base de datos está vacía.
 
-const List<Exercise> exerciseCatalog = [
-  Exercise(
-    id: 'ex1',
-    name: 'Press de banca',
-    muscleGroup: 'Pecho',
-    equipment: 'Barra',
-    level: 'Intermedio',
-  ),
-  Exercise(
-    id: 'ex2',
-    name: 'Sentadilla',
-    muscleGroup: 'Piernas',
-    equipment: 'Barra',
-    level: 'Intermedio',
-  ),
-  Exercise(
-    id: 'ex3',
-    name: 'Peso muerto',
-    muscleGroup: 'Espalda',
-    equipment: 'Barra',
-    level: 'Avanzado',
-  ),
-  Exercise(
-    id: 'ex4',
-    name: 'Dominadas',
-    muscleGroup: 'Espalda',
-    equipment: 'Peso corporal',
-    level: 'Intermedio',
-  ),
-  Exercise(
-    id: 'ex5',
-    name: 'Press militar',
-    muscleGroup: 'Hombros',
-    equipment: 'Barra',
-    level: 'Intermedio',
-  ),
-  Exercise(
-    id: 'ex6',
-    name: 'Remo con barra',
-    muscleGroup: 'Espalda',
-    equipment: 'Barra',
-    level: 'Intermedio',
-  ),
-  Exercise(
-    id: 'ex7',
-    name: 'Curl de bíceps',
-    muscleGroup: 'Brazos',
-    equipment: 'Mancuernas',
-    level: 'Principiante',
-  ),
-  Exercise(
-    id: 'ex8',
-    name: 'Extensión de tríceps',
-    muscleGroup: 'Brazos',
-    equipment: 'Polea',
-    level: 'Principiante',
-  ),
-  Exercise(
-    id: 'ex9',
-    name: 'Zancadas',
-    muscleGroup: 'Piernas',
-    equipment: 'Mancuernas',
-    level: 'Principiante',
-  ),
-  Exercise(
-    id: 'ex10',
-    name: 'Plancha',
-    muscleGroup: 'Core',
-    equipment: 'Peso corporal',
-    level: 'Principiante',
-  ),
-];
+/// Nombres de las colecciones del catálogo en Firestore.
+abstract final class CatalogCollections {
+  static const exercises = 'exercises';
+  static const foods = 'foods';
+  static const templates = 'routineTemplates';
+}
 
-const List<Food> foodCatalog = [
-  Food(
-    id: 'f1',
-    name: 'Pechuga de pollo',
-    kcalPer100: 110,
-    proteinPer100: 23,
-    carbsPer100: 0,
-    fatPer100: 1.5,
-  ),
-  Food(
-    id: 'f2',
-    name: 'Arroz blanco cocido',
-    kcalPer100: 130,
-    proteinPer100: 2.7,
-    carbsPer100: 28,
-    fatPer100: 0.3,
-  ),
-  Food(
-    id: 'f3',
-    name: 'Huevo entero',
-    kcalPer100: 143,
-    proteinPer100: 13,
-    carbsPer100: 1.1,
-    fatPer100: 9.5,
-  ),
-  Food(
-    id: 'f4',
-    name: 'Plátano',
-    kcalPer100: 89,
-    proteinPer100: 1.1,
-    carbsPer100: 23,
-    fatPer100: 0.3,
-  ),
-  Food(
-    id: 'f5',
-    name: 'Avena',
-    kcalPer100: 379,
-    proteinPer100: 13,
-    carbsPer100: 67,
-    fatPer100: 6.5,
-  ),
-  Food(
-    id: 'f6',
-    name: 'Yogur griego',
-    kcalPer100: 97,
-    proteinPer100: 9,
-    carbsPer100: 3.6,
-    fatPer100: 5,
-  ),
-];
+class CatalogSeed {
+  const CatalogSeed({
+    required this.exercises,
+    required this.foods,
+    required this.templates,
+  });
 
-final List<Routine> routineTemplates = [
-  Routine(
-    id: 'tpl-full',
-    name: 'Full body 3 días',
-    description: 'Plantilla para 3 días semanales. Cuerpo completo.',
-    templateName: 'Full body',
-    isTemplate: true,
-    exercises: [
-      exerciseCatalog[1],
-      exerciseCatalog[0],
-      exerciseCatalog[3],
-      exerciseCatalog[9],
-    ],
-  ),
-  Routine(
-    id: 'tpl-ul',
-    name: 'Torso / Pierna',
-    description: 'Plantilla de 4 días: dos de torso y dos de pierna.',
-    templateName: 'Torso/Pierna',
-    isTemplate: true,
-    exercises: [
-      exerciseCatalog[0],
-      exerciseCatalog[5],
-      exerciseCatalog[1],
-      exerciseCatalog[2],
-    ],
-  ),
-  Routine(
-    id: 'tpl-ppl',
-    name: 'Push / Pull / Legs',
-    description: 'Plantilla de 6 días o 3 días según disponibilidad.',
-    templateName: 'Push/Pull/Legs',
-    isTemplate: true,
-    exercises: [
-      exerciseCatalog[0],
-      exerciseCatalog[4],
-      exerciseCatalog[5],
-      exerciseCatalog[1],
-    ],
-  ),
-];
+  final List<Exercise> exercises;
+  final List<Food> foods;
+  final List<Routine> templates;
+
+  static const assetPath = 'assets/seed/catalog.json';
+
+  static Future<CatalogSeed> load() async {
+    final json = await rootBundle.loadString(assetPath);
+    return CatalogSeed.fromJson(jsonDecode(json) as Map<String, dynamic>);
+  }
+
+  factory CatalogSeed.fromJson(Map<String, dynamic> m) {
+    final exercises = [
+      for (final e in m['exercises'] as List)
+        Exercise.fromMap(Map<String, dynamic>.from(e)),
+    ];
+    final byId = {for (final e in exercises) e.id: e};
+    return CatalogSeed(
+      exercises: exercises,
+      foods: [
+        for (final f in m['foods'] as List)
+          Food.fromMap(Map<String, dynamic>.from(f)),
+      ],
+      templates: [
+        for (final t in m['routineTemplates'] as List)
+          Routine(
+            id: t['id'] as String,
+            name: t['name'] as String,
+            description: t['description'] as String? ?? '',
+            templateName: t['templateName'] as String? ?? 'Plantilla',
+            recommendedDays: (t['recommendedDays'] as num?)?.toInt(),
+            isTemplate: true,
+            exercises: [
+              for (final id in t['exerciseIds'] as List) byId[id as String]!,
+            ],
+          ),
+      ],
+    );
+  }
+}

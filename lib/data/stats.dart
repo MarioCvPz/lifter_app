@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import 'app_store.dart';
-import 'catalog.dart';
 
 /// Datos calculados a partir de lo que hay en el store: rachas, volumen,
 /// macros, agua… No leen ni escriben en Firestore.
@@ -163,14 +162,12 @@ extension AppStoreStats on AppStore {
     return (ml / 100).round() * 100;
   }
 
-  /// Plantilla que encaja con los días por semana del perfil.
-  Routine recommendedRoutine() {
+  /// Plantilla cuyo `recommendedDays` se acerca más a los días por semana
+  /// del perfil. Null si el catálogo aún no tiene plantillas.
+  Routine? recommendedRoutine() {
+    if (templates.isEmpty) return null;
     final days = user?.daysPerWeek ?? 4;
-    final id = days <= 3
-        ? 'tpl-full'
-        : days <= 4
-        ? 'tpl-ul'
-        : 'tpl-ppl';
-    return routineTemplates.firstWhere((r) => r.id == id);
+    int distance(Routine r) => ((r.recommendedDays ?? 99) - days).abs();
+    return templates.reduce((a, b) => distance(b) < distance(a) ? b : a);
   }
 }

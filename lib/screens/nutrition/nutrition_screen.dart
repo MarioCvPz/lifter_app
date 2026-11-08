@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../data/app_store.dart';
-import '../../data/catalog.dart';
 import '../../data/stats.dart';
 import '../../models/models.dart';
 import '../../widgets/brand.dart';
@@ -47,7 +46,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
     final targets = store.macroTargets();
     final logs = store.nutritionFor(_day);
     final q = _query.text.trim().toLowerCase();
-    final foods = foodCatalog
+    final foods = store.foods
         .where((f) => q.isEmpty || f.name.toLowerCase().contains(q))
         .toList();
 
@@ -132,6 +131,13 @@ class _NutritionScreenState extends State<NutritionScreen> {
             ),
           ),
           const SizedBox(height: 8),
+          if (store.foods.isEmpty)
+            const Text(
+              'El catálogo de alimentos está vacío. Un admin tiene que '
+              'cargarlo desde Administración.',
+            )
+          else if (foods.isEmpty)
+            const Text('Ningún alimento coincide con la búsqueda.'),
           for (final food in foods)
             Card(
               child: ListTile(

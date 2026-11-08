@@ -31,6 +31,15 @@ void main() {
               if (picked == null || !context.mounted) return;
               result = await showRoutineEditor(
                 context,
+                exercises: const [
+                  Exercise(
+                    id: 'ex1',
+                    name: 'Press de banca',
+                    muscleGroup: 'Pecho',
+                    equipment: 'Barra',
+                    level: 'Intermedio',
+                  ),
+                ],
                 title: 'Rutina para $picked',
                 templateName: 'Entrenador',
               );

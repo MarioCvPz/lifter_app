@@ -50,14 +50,17 @@ class HomeScreen extends StatelessWidget {
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 12),
-          Row(
+          // Wrap: en pantallas estrechas la segunda etiqueta baja de línea
+          // en vez de salirse por la derecha.
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
               StatusPill(
                 label: '$streak ${streak == 1 ? 'día' : 'días'}',
                 color: AppTheme.coral,
                 icon: Icons.local_fire_department,
               ),
-              const SizedBox(width: 8),
               StatusPill(
                 label: trainedToday
                     ? 'Hoy: entreno hecho'
@@ -118,15 +121,18 @@ class HomeScreen extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 24),
-          SectionHeader(
-            'Entrenamiento de hoy',
-            trailing: StatusPill(
-              label: 'Sesión ${weekDone + (trainedToday ? 0 : 1)}',
-              color: scheme.secondary,
+          // Sin rutinas ni plantillas en el catálogo no hay nada que sugerir.
+          if (today != null) ...[
+            const SizedBox(height: 24),
+            SectionHeader(
+              'Entrenamiento de hoy',
+              trailing: StatusPill(
+                label: 'Sesión ${weekDone + (trainedToday ? 0 : 1)}',
+                color: scheme.secondary,
+              ),
             ),
-          ),
-          _TodayHero(routine: today),
+            _TodayHero(routine: today),
+          ],
           const SizedBox(height: 16),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -523,6 +529,24 @@ class _WaterCard extends StatelessWidget {
 
   final AppStore store;
 
+  static const _glassMl = 250;
+
+  /// Suma un vaso y ofrece deshacerlo desde el aviso de abajo.
+  void _add(BuildContext context) {
+    store.addWater(_glassMl);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: const Text('+250 ml de agua'),
+          action: SnackBarAction(
+            label: 'Deshacer',
+            onPressed: () => store.addWater(-_glassMl),
+          ),
+        ),
+      );
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -553,10 +577,20 @@ class _WaterCard extends StatelessWidget {
                   ),
                 ),
                 IconButton.filledTonal(
+                  tooltip: 'Quitar 250 ml',
+                  visualDensity: VisualDensity.compact,
+                  iconSize: 18,
+                  onPressed: store.waterMl == 0
+                      ? null
+                      : () => store.addWater(-_glassMl),
+                  icon: const Icon(Icons.remove),
+                ),
+                const SizedBox(width: 4),
+                IconButton.filledTonal(
                   tooltip: 'Añadir 250 ml',
                   visualDensity: VisualDensity.compact,
                   iconSize: 18,
-                  onPressed: () => store.addWater(250),
+                  onPressed: () => _add(context),
                   icon: const Icon(Icons.add),
                 ),
               ],

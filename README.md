@@ -11,13 +11,13 @@ LiFTeR+ es una app para registrar entrenamientos, seguir rutinas y controlar la 
 
 ## Funcionalidades
 
-- **Inicio:** resumen de la semana, racha de días entrenando, reto semanal y contador de agua.
+- **Inicio:** resumen de la semana, racha de días entrenando, reto semanal y contador de agua (con botón para quitar y "Deshacer").
 - **Entrenamientos:** registro de ejercicios con series, repeticiones y peso, más el historial con el volumen total de cada sesión.
 - **Rutinas:** plantillas predefinidas (Full body, Torso/Pierna, Push/Pull/Legs), rutinas propias, rutinas asignadas por un entrenador y una rutina recomendada según los días por semana del perfil.
 - **Nutrición:** registro de comidas por gramos, con calorías y macros del día frente a un objetivo calculado a partir del peso y la meta del usuario.
 - **Perfil:** datos físicos, estadísticas, gráfica semanal y logros desbloqueables.
-- **Entrenador:** asigna rutinas a otros usuarios.
-- **Admin:** cambia el rol de los usuarios.
+- **Entrenador:** asigna rutinas, ve la ficha y las estadísticas de sus usuarios (sesiones, cumplimiento, volumen, ejercicios) y exporta informes en Excel (tablas) y PDF (gráficas).
+- **Admin:** resumen global de la app, cambio de roles y gestión del catálogo (alimentos, ejercicios y plantillas de rutina).
 - **Login:** con correo y contraseña o con Google, y recuperación de contraseña.
 
 ## Tecnologías
@@ -43,7 +43,9 @@ lib/
 ├── data/
 │   ├── app_store.dart     # Estado global + lectura/escritura en Firestore
 │   ├── auth_service.dart  # Login, registro, Google y logout
-│   ├── catalog.dart       # Catálogo fijo: ejercicios, alimentos y plantillas
+│   ├── catalog.dart       # Colecciones del catálogo y carga inicial desde assets/seed
+│   ├── client_report.dart # Estadísticas de un usuario para el entrenador
+│   ├── report_export.dart # Informes del entrenador en Excel y PDF
 │   ├── stats.dart         # Cálculos: rachas, volumen, macros, agua…
 │   └── achievements.dart  # Logros a partir de las estadísticas
 ├── screens/
@@ -87,15 +89,26 @@ users/{uid}                      # Perfil del usuario
 assignedRoutines/{id}            # Rutinas que un entrenador asigna a un usuario
     (campos de la rutina), trainerId, trainerName,
     userId, userName, createdAt
+
+exercises/{id}                   # Catálogo de ejercicios (solo admins escriben)
+    name, muscleGroup, equipment, level
+
+foods/{id}                       # Catálogo de alimentos (solo admins escriben)
+    name, kcalPer100, proteinPer100, carbsPer100, fatPer100
+
+routineTemplates/{id}            # Plantillas de rutina (solo admins escriben)
+    name, description, templateName, recommendedDays, exercises: [...]
 ```
 
-Los ejercicios, los alimentos y las plantillas **no se guardan en la base de datos**: están en [`lib/data/catalog.dart`](lib/data/catalog.dart). (Más adelante se gestionarán desde firebase)
+El catálogo (ejercicios, alimentos y plantillas) está en Firestore y no hay listas fijas en el código. La primera vez, un admin entra en **Administración → Catálogo → Cargar catálogo inicial**, que sube los datos de [`assets/seed/catalog.json`](assets/seed/catalog.json). A partir de ahí se edita desde la app.
+
+Las reglas de seguridad están en [`firestore.rules`](firestore.rules). Cada vez que cambian hay que publicarlas, con `firebase deploy --only firestore:rules` o pegándolas en la consola de Firebase (Firestore → Reglas).
 
 
 ## Próximos pasos
 
 - [ ] Editar entrenamientos, rutinas y comidas ya guardados (ahora mismo solo se pueden crear y borrar).
 - [ ] Avisar al usuario cuando falla una escritura en Firestore.
-- [ ] Tests unitarios de las estadísticas (`stats.dart`).
+- [ ] Tests unitarios de las estadísticas (`stats.dart`). Los informes del entrenador ya tienen tests.
 - [ ] Configurar Firebase para iOS.
 

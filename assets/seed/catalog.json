@@ -1,0 +1,49 @@
+{
+  "_comment": "Datos iniciales del catálogo. No los lee la app en el día a día: solo se suben a Firestore cuando un admin pulsa 'Cargar catálogo inicial'. Después se editan desde el panel de administración.",
+  "exercises": [
+    { "id": "ex1", "name": "Press de banca", "muscleGroup": "Pecho", "equipment": "Barra", "level": "Intermedio" },
+    { "id": "ex2", "name": "Sentadilla", "muscleGroup": "Piernas", "equipment": "Barra", "level": "Intermedio" },
+    { "id": "ex3", "name": "Peso muerto", "muscleGroup": "Espalda", "equipment": "Barra", "level": "Avanzado" },
+    { "id": "ex4", "name": "Dominadas", "muscleGroup": "Espalda", "equipment": "Peso corporal", "level": "Intermedio" },
+    { "id": "ex5", "name": "Press militar", "muscleGroup": "Hombros", "equipment": "Barra", "level": "Intermedio" },
+    { "id": "ex6", "name": "Remo con barra", "muscleGroup": "Espalda", "equipment": "Barra", "level": "Intermedio" },
+    { "id": "ex7", "name": "Curl de bíceps", "muscleGroup": "Brazos", "equipment": "Mancuernas", "level": "Principiante" },
+    { "id": "ex8", "name": "Extensión de tríceps", "muscleGroup": "Brazos", "equipment": "Polea", "level": "Principiante" },
+    { "id": "ex9", "name": "Zancadas", "muscleGroup": "Piernas", "equipment": "Mancuernas", "level": "Principiante" },
+    { "id": "ex10", "name": "Plancha", "muscleGroup": "Core", "equipment": "Peso corporal", "level": "Principiante" }
+  ],
+  "foods": [
+    { "id": "f1", "name": "Pechuga de pollo", "kcalPer100": 110, "proteinPer100": 23, "carbsPer100": 0, "fatPer100": 1.5 },
+    { "id": "f2", "name": "Arroz blanco cocido", "kcalPer100": 130, "proteinPer100": 2.7, "carbsPer100": 28, "fatPer100": 0.3 },
+    { "id": "f3", "name": "Huevo entero", "kcalPer100": 143, "proteinPer100": 13, "carbsPer100": 1.1, "fatPer100": 9.5 },
+    { "id": "f4", "name": "Plátano", "kcalPer100": 89, "proteinPer100": 1.1, "carbsPer100": 23, "fatPer100": 0.3 },
+    { "id": "f5", "name": "Avena", "kcalPer100": 379, "proteinPer100": 13, "carbsPer100": 67, "fatPer100": 6.5 },
+    { "id": "f6", "name": "Yogur griego", "kcalPer100": 97, "proteinPer100": 9, "carbsPer100": 3.6, "fatPer100": 5 }
+  ],
+  "routineTemplates": [
+    {
+      "id": "tpl-full",
+      "name": "Full body 3 días",
+      "description": "Plantilla para 3 días semanales. Cuerpo completo.",
+      "templateName": "Full body",
+      "recommendedDays": 3,
+      "exerciseIds": ["ex2", "ex1", "ex4", "ex10"]
+    },
+    {
+      "id": "tpl-ul",
+      "name": "Torso / Pierna",
+      "description": "Plantilla de 4 días: dos de torso y dos de pierna.",
+      "templateName": "Torso/Pierna",
+      "recommendedDays": 4,
+      "exerciseIds": ["ex1", "ex6", "ex2", "ex3"]
+    },
+    {
+      "id": "tpl-ppl",
+      "name": "Push / Pull / Legs",
+      "description": "Plantilla de 6 días o 3 días según disponibilidad.",
+      "templateName": "Push/Pull/Legs",
+      "recommendedDays": 6,
+      "exerciseIds": ["ex1", "ex5", "ex6", "ex2"]
+    }
+  ]
+}

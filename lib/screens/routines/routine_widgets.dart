@@ -1,21 +1,30 @@
 import 'package:flutter/material.dart';
 
-import '../../data/catalog.dart';
 import '../../models/models.dart';
 import '../../theme/app_theme.dart';
 import '../workouts/register_workout_screen.dart';
 
-/// Diálogo para crear una rutina (nombre, descripción y ejercicios).
-/// Devuelve null si se cancela.
+/// Diálogo para crear una rutina (nombre, descripción y ejercicios) a partir
+/// de [exercises] (el catálogo). Con [initial] edita esa rutina manteniendo su
+/// id. Con [askRecommendedDays] pide también para cuántos días por semana se
+/// recomienda (plantillas). Devuelve null si se cancela.
 Future<Routine?> showRoutineEditor(
   BuildContext context, {
+  required List<Exercise> exercises,
   String title = 'Nueva rutina',
   String templateName = 'Personal',
+  Routine? initial,
+  bool askRecommendedDays = false,
 }) {
   return showDialog<Routine>(
     context: context,
-    builder: (_) =>
-        _RoutineEditorDialog(title: title, templateName: templateName),
+    builder: (_) => _RoutineEditorDialog(
+      title: title,
+      templateName: templateName,
+      exercises: exercises,
+      initial: initial,
+      askRecommendedDays: askRecommendedDays,
+    ),
   );
 }
 
@@ -23,35 +32,59 @@ Future<Routine?> showRoutineEditor(
 /// el diálogo ya se ha cerrado del todo (no al acabar showDialog, que vuelve
 /// antes de que termine la animación de cierre).
 class _RoutineEditorDialog extends StatefulWidget {
-  const _RoutineEditorDialog({required this.title, required this.templateName});
+  const _RoutineEditorDialog({
+    required this.title,
+    required this.templateName,
+    required this.exercises,
+    required this.initial,
+    required this.askRecommendedDays,
+  });
 
   final String title;
   final String templateName;
+  final List<Exercise> exercises;
+  final Routine? initial;
+  final bool askRecommendedDays;
 
   @override
   State<_RoutineEditorDialog> createState() => _RoutineEditorDialogState();
 }
 
 class _RoutineEditorDialogState extends State<_RoutineEditorDialog> {
-  final _name = TextEditingController();
-  final _description = TextEditingController();
-  final _selected = <Exercise>[];
+  late final _name = TextEditingController(text: widget.initial?.name);
+  late final _description = TextEditingController(
+    text: widget.initial?.description,
+  );
+  late final _templateName = TextEditingController(
+    text: widget.initial?.templateName ?? widget.templateName,
+  );
+  late final _selected = <Exercise>[...?widget.initial?.exercises];
+  late int _days = widget.initial?.recommendedDays ?? 3;
 
   @override
   void dispose() {
     _name.dispose();
     _description.dispose();
+    _templateName.dispose();
     super.dispose();
   }
 
   void _save() {
+    final initial = widget.initial;
+    final tag = _templateName.text.trim();
     Navigator.pop(
       context,
       Routine(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: initial?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         name: _name.text.trim(),
         description: _description.text.trim(),
-        templateName: widget.templateName,
+        templateName: widget.askRecommendedDays && tag.isNotEmpty
+            ? tag
+            : initial?.templateName ?? widget.templateName,
+        isTemplate: initial?.isTemplate ?? widget.askRecommendedDays,
+        recommendedDays: widget.askRecommendedDays
+            ? _days
+            : initial?.recommendedDays,
         exercises: List.of(_selected),
       ),
     );
@@ -79,6 +112,32 @@ class _RoutineEditorDialogState extends State<_RoutineEditorDialog> {
                   labelText: 'Descripción (opcional)',
                 ),
               ),
+              if (widget.askRecommendedDays) ...[
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _templateName,
+                  decoration: const InputDecoration(
+                    labelText: 'Etiqueta (p. ej. Full body)',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Expanded(child: Text('Recomendada para')),
+                    DropdownButton<int>(
+                      value: _days,
+                      items: [
+                        for (var d = 1; d <= 7; d++)
+                          DropdownMenuItem(
+                            value: d,
+                            child: Text('$d ${d == 1 ? 'día' : 'días'}/sem'),
+                          ),
+                      ],
+                      onChanged: (d) => setState(() => _days = d ?? _days),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerLeft,
@@ -88,7 +147,12 @@ class _RoutineEditorDialogState extends State<_RoutineEditorDialog> {
                 ),
               ),
               const SizedBox(height: 12),
-              for (final ex in exerciseCatalog)
+              if (widget.exercises.isEmpty)
+                const Text(
+                  'El catálogo de ejercicios está vacío. Un admin tiene que '
+                  'cargarlo desde Administración.',
+                ),
+              for (final ex in widget.exercises)
                 CheckboxListTile(
                   dense: true,
                   value: _selected.contains(ex),

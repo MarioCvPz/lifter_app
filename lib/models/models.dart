@@ -30,6 +30,14 @@ class Exercise {
     'equipment': equipment,
     'level': level,
   };
+
+  // Los ejercicios llegan de Firestore y se recrean en cada lectura, así que
+  // se comparan por id (p. ej. para saber si ya está elegido en un editor).
+  @override
+  bool operator ==(Object other) => other is Exercise && other.id == id;
+
+  @override
+  int get hashCode => id.hashCode;
 }
 
 class WorkoutSet {
@@ -67,6 +75,9 @@ class WorkoutExercise {
 }
 
 class Workout {
+  /// Minutos que se cuentan por ejercicio cuando no se indica la duración.
+  static const minutesPerExercise = 5;
+
   const Workout({
     required this.id,
     required this.name,
@@ -121,6 +132,7 @@ class Routine {
     required this.templateName,
     required this.exercises,
     this.isTemplate = false,
+    this.recommendedDays,
   });
 
   final String id;
@@ -129,6 +141,9 @@ class Routine {
   final String templateName;
   final List<Exercise> exercises;
   final bool isTemplate;
+
+  /// Solo plantillas: días por semana para los que se recomienda.
+  final int? recommendedDays;
 
   static const levels = ['Principiante', 'Intermedio', 'Avanzado'];
 
@@ -145,14 +160,20 @@ class Routine {
   List<String> get muscleGroups =>
       {for (final e in exercises) e.muscleGroup}.toList();
 
-  /// Estimación: unos 10 minutos por ejercicio.
-  int get estimatedMin => exercises.length * 10;
+  /// Estimación: los mismos minutos por ejercicio que un entreno sin duración.
+  int get estimatedMin => exercises.length * Workout.minutesPerExercise;
 
-  factory Routine.fromMap(String id, Map<String, dynamic> m) => Routine(
+  factory Routine.fromMap(
+    String id,
+    Map<String, dynamic> m, {
+    bool isTemplate = false,
+  }) => Routine(
     id: id,
     name: m['name'] as String,
     description: m['description'] as String? ?? '',
     templateName: m['templateName'] as String? ?? 'Personal',
+    isTemplate: isTemplate,
+    recommendedDays: (m['recommendedDays'] as num?)?.toInt(),
     exercises: [
       for (final e in m['exercises'] as List)
         Exercise.fromMap(Map<String, dynamic>.from(e)),
@@ -164,6 +185,7 @@ class Routine {
     'description': description,
     'templateName': templateName,
     'exercises': [for (final e in exercises) e.toMap()],
+    'recommendedDays': ?recommendedDays,
     'createdAt': Timestamp.now(),
   };
 }

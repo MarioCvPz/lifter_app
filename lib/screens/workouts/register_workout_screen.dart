@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../data/app_store.dart';
-import '../../data/catalog.dart';
 import '../../models/models.dart';
 import '../../widgets/help.dart';
 
@@ -32,9 +31,6 @@ class _RegisterWorkoutScreenState extends State<RegisterWorkoutScreen> {
   final _duration = TextEditingController();
   final List<_DraftExercise> _items = [];
 
-  /// Para calcular la duración si el usuario no la escribe.
-  final _startedAt = DateTime.now();
-
   @override
   void initState() {
     super.initState();
@@ -55,12 +51,11 @@ class _RegisterWorkoutScreenState extends State<RegisterWorkoutScreen> {
     super.dispose();
   }
 
-  int get _elapsedMin {
-    final min = DateTime.now().difference(_startedAt).inMinutes;
-    return min < 1 ? 1 : min;
-  }
+  /// Duración que se guarda si el usuario no escribe ninguna.
+  int get _defaultMin => _items.length * Workout.minutesPerExercise;
 
   Future<void> _pickExercise() async {
+    final catalog = SessionScope.of(context).exercises;
     final chosen = await showModalBottomSheet<Exercise>(
       context: context,
       showDragHandle: true,
@@ -74,7 +69,14 @@ class _RegisterWorkoutScreenState extends State<RegisterWorkoutScreen> {
               controller: controller,
               children: [
                 const ListTile(title: Text('Catálogo de ejercicios')),
-                for (final ex in exerciseCatalog)
+                if (catalog.isEmpty)
+                  const ListTile(
+                    title: Text('El catálogo de ejercicios está vacío.'),
+                    subtitle: Text(
+                      'Un admin tiene que cargarlo desde Administración.',
+                    ),
+                  ),
+                for (final ex in catalog)
                   ListTile(
                     title: Text(ex.name),
                     subtitle: Text('${ex.muscleGroup} · ${ex.equipment}'),
@@ -99,6 +101,9 @@ class _RegisterWorkoutScreenState extends State<RegisterWorkoutScreen> {
       error = 'Cada ejercicio necesita al menos una serie.';
     } else if (_items.any((i) => i.sets.any((s) => s.reps <= 0))) {
       error = 'Las repeticiones tienen que ser mayores que 0.';
+    } else if (_duration.text.trim().isNotEmpty &&
+        (int.tryParse(_duration.text.trim()) ?? 0) <= 0) {
+      error = 'La duración tiene que ser un número de minutos mayor que 0.';
     }
     if (error != null) {
       ScaffoldMessenger.of(
@@ -107,7 +112,7 @@ class _RegisterWorkoutScreenState extends State<RegisterWorkoutScreen> {
       return;
     }
 
-    final duration = int.tryParse(_duration.text) ?? _elapsedMin;
+    final duration = int.tryParse(_duration.text.trim()) ?? _defaultMin;
     final workout = Workout(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: _name.text.trim().isEmpty ? 'Entrenamiento' : _name.text.trim(),
@@ -183,11 +188,13 @@ class _RegisterWorkoutScreenState extends State<RegisterWorkoutScreen> {
             TextField(
               controller: _duration,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Duración (minutos)',
+                hintText: '$_defaultMin',
                 helperText:
-                    'Si lo dejas vacío se usa el tiempo desde que abriste '
-                    'esta pantalla.',
+                    'Si lo dejas vacío se cuentan '
+                    '${Workout.minutesPerExercise} min por ejercicio '
+                    '($_defaultMin min).',
               ),
             ),
             const SizedBox(height: 16),
