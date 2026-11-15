@@ -66,3 +66,50 @@ class CatalogSeed {
     );
   }
 }
+
+/// Grupos musculares del catálogo, en el orden en que se muestran en las
+/// listas de ejercicios.
+const muscleGroups = [
+  'Pecho',
+  'Espalda',
+  'Hombros',
+  'Brazos',
+  'Piernas',
+  'Core',
+];
+
+/// Ejercicios agrupados por músculo: los grupos en el orden de
+/// [muscleGroups] (y al final cualquier otro que haya en Firestore), y
+/// dentro de cada uno por orden alfabético. Un `Map` de Dart recuerda el
+/// orden en que se añaden las claves (como un `LinkedHashMap` de Java).
+Map<String, List<Exercise>> exercisesByMuscle(List<Exercise> exercises) {
+  final others = {
+    for (final e in exercises)
+      if (!muscleGroups.contains(e.muscleGroup)) e.muscleGroup,
+  }.toList()..sort();
+  final groups = <String, List<Exercise>>{};
+  for (final group in [...muscleGroups, ...others]) {
+    final inGroup = [
+      for (final e in exercises)
+        if (e.muscleGroup == group) e,
+    ]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    if (inGroup.isNotEmpty) groups[group] = inGroup;
+  }
+  return groups;
+}
+
+/// Ejercicios cuyo nombre contiene [query] (sin distinguir mayúsculas) y
+/// que son del grupo [group] (null = todos).
+List<Exercise> filterExercises(
+  List<Exercise> exercises, {
+  String query = '',
+  String? group,
+}) {
+  final text = query.trim().toLowerCase();
+  return [
+    for (final e in exercises)
+      if (e.name.toLowerCase().contains(text) &&
+          (group == null || e.muscleGroup == group))
+        e,
+  ];
+}

@@ -433,7 +433,7 @@ class TrainerReport {
       ),
       pw.Text(
         '${c.user.profile.email} · objetivo ${c.daysPerWeek} días/semana · '
-        '${c.user.profile.goal} · ${c.user.profile.experience}',
+        '${c.user.profile.goal.label} · ${c.user.profile.experience}',
         style: const pw.TextStyle(fontSize: 9, color: _grey),
       ),
       pw.SizedBox(height: 10),

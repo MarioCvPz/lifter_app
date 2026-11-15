@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import 'app_store.dart';
+import 'nutrition_calculator.dart';
+import 'routine_generator.dart';
+import 'workout_draft.dart';
 
 /// Datos calculados a partir de lo que hay en el store: rachas, volumen,
 /// macros, agua… No leen ni escriben en Firestore.
@@ -22,31 +25,15 @@ extension AppStoreStats on AppStore {
         .toList();
   }
 
-  /// Objetivo diario orientativo según peso y objetivo del perfil:
-  /// mantenimiento ≈ 33 kcal/kg, ajustado por objetivo; proteína y grasa
-  /// por kg de peso y el resto de calorías en hidratos.
-  DailyMacros macroTargets() {
-    final weight = user?.weightKg ?? 75;
-    final goal = user?.goal ?? 'Salud general';
-    final factor = switch (goal) {
-      'Pérdida de grasa' => 0.85,
-      'Hipertrofia' => 1.10,
-      'Fuerza' => 1.05,
-      _ => 1.0,
-    };
-    final kcal = weight * 33 * factor;
-    final protein = weight * (goal == 'Salud general' ? 1.6 : 2.0);
-    final fat = weight * 0.9;
-    final carbs = ((kcal - protein * 4 - fat * 9) / 4).clamp(
-      0,
-      double.infinity,
-    );
-    return DailyMacros(
-      kcal: kcal,
-      protein: protein,
-      carbs: carbs.toDouble(),
-      fat: fat,
-    );
+  /// Objetivo diario de calorías y macros, calculado con
+  /// [NutritionCalculator] (sexo, edad, altura, peso, actividad y objetivo).
+  /// Usa [profile] si se indica (por ejemplo, las respuestas del
+  /// cuestionario aún sin guardar) y, si no, el perfil de la sesión.
+  /// Sin ninguno de los dos (sin sesión) usa un perfil con los valores por
+  /// defecto, para que las pantallas siempre tengan un objetivo.
+  DailyMacros macroTargets([UserProfile? profile]) {
+    final p = profile ?? user ?? UserProfile(name: '', username: '', email: '');
+    return NutritionCalculator.macros(p);
   }
 
   DateTime get _monday {
@@ -156,18 +143,222 @@ extension AppStoreStats on AppStore {
   int sessionsThisWeek(String routineId) =>
       _thisWeek.where((w) => w.routineId == routineId).length;
 
-  /// Objetivo de agua orientativo: 35 ml por kg, redondeado a 100 ml.
-  int get waterGoalMl {
-    final ml = (user?.weightKg ?? 75) * 35;
-    return (ml / 100).round() * 100;
+  /// Series de la última vez que hizo ese ejercicio (del entreno más
+  /// reciente que lo tenga), o una lista vacía si nunca lo ha hecho. Son
+  /// las pistas de los campos vacíos del entrenamiento en directo.
+  List<WorkoutSet> lastSetsOf(String exerciseId) {
+    Workout? latest;
+    List<WorkoutSet> sets = const [];
+    for (final w in workouts) {
+      for (final e in w.exercises) {
+        if (e.exercise.id != exerciseId) continue;
+        if (latest == null || w.date.isAfter(latest.date)) {
+          latest = w;
+          sets = e.sets;
+        }
+      }
+    }
+    return sets;
   }
 
-  /// Plantilla cuyo `recommendedDays` se acerca más a los días por semana
-  /// del perfil. Null si el catálogo aún no tiene plantillas.
-  Routine? recommendedRoutine() {
-    if (templates.isEmpty) return null;
-    final days = user?.daysPerWeek ?? 4;
-    int distance(Routine r) => ((r.recommendedDays ?? 99) - days).abs();
-    return templates.reduce((a, b) => distance(b) < distance(a) ? b : a);
+  /// Veces que ha hecho el ejercicio, de la más reciente a la más antigua
+  /// (como mucho [limit]). Cada una con la fecha del entreno y lo que hizo.
+  List<({DateTime date, WorkoutExercise entry})> historyOf(
+    String exerciseId, {
+    int limit = 10,
+  }) {
+    final history = [
+      for (final w in workouts)
+        for (final e in w.exercises)
+          if (e.exercise.id == exerciseId) (date: w.date, entry: e),
+    ]..sort((a, b) => b.date.compareTo(a.date));
+    return history.take(limit).toList();
   }
+
+  /// Propuestas para "Sustituir": ejercicios del catálogo con el mismo
+  /// patrón de movimiento que [exercise], que el usuario puede hacer con su
+  /// material y sin cargar sus lesiones, y que no están en [exclude]. Usa
+  /// [RoutineGenerator.candidates] del generador (sin filtrar por nivel,
+  /// para que haya más opciones). Sin perfil o con un ejercicio sin patrón
+  /// ("otro"), no hay propuestas.
+  List<Exercise> substituteSuggestions(
+    Exercise exercise, {
+    Set<String> exclude = const {},
+  }) {
+    final profile = user;
+    if (profile == null || exercise.pattern == MovementPattern.other) {
+      return const [];
+    }
+    return RoutineGenerator.candidates(
+      exercise.pattern,
+      profile,
+      exercises,
+      exclude: {...exclude, exercise.id},
+      ignoreLevel: true,
+    );
+  }
+
+  /// True si [routineId] es una rutina creada por el usuario (no una
+  /// plantilla ni una rutina de su entrenador): solo esas se pueden
+  /// actualizar al terminar el entreno.
+  bool isOwnRoutine(String routineId) =>
+      routines.any((r) => r.id == routineId && !r.isTemplate);
+
+  /// "Sugeridos para este día" con el perfil y el catálogo de la sesión
+  /// (ver [RoutineGenerator.suggestionsFor]).
+  List<Exercise> planSuggestions(PlanDay day) {
+    final profile = user;
+    if (profile == null) return const [];
+    return RoutineGenerator.suggestionsFor(day, profile, exercises);
+  }
+
+  /// Entreno de hoy o, si hoy no toca, el del próximo día de entreno
+  /// (para la tarjeta de la pestaña Entrenos). Null si no hay ninguno en
+  /// la semana (sin plan).
+  DayWorkout? nextWorkout(DateTime now) {
+    for (var offset = 0; offset < 7; offset++) {
+      // Días de la semana a partir de hoy: con % 7, después del domingo
+      // (7) vuelve el lunes (1).
+      final weekday = (now.weekday - 1 + offset) % 7 + 1;
+      final workout = workoutFor(weekday);
+      if (workout != null) return workout;
+    }
+    return null;
+  }
+
+  /// Entreno de ese día de la semana (1 = lunes) para Inicio, o null si
+  /// en el plan es día de descanso. Orden de prioridad:
+  /// 1. Si el entrenador le ha asignado alguna rutina, la última (las
+  ///    asignaciones no tienen día, así que va en todos los días de
+  ///    entreno).
+  /// 2. Si no, el día del plan.
+  DayWorkout? workoutFor(int weekday) {
+    final day = plan?.dayFor(weekday);
+    if (day == null) return null;
+    if (assignedToMe.isNotEmpty) {
+      // La lista está ordenada de la más nueva a la más antigua.
+      final routine = assignedToMe.first.routine;
+      return DayWorkout(
+        weekday: weekday,
+        name: routine.name,
+        routine: routine,
+        fromTrainer: true,
+      );
+    }
+    return DayWorkout(
+      weekday: weekday,
+      name: day.name,
+      planDay: day,
+      routine: Routine(
+        id: 'plan-${day.weekday}',
+        name: day.title,
+        description: '',
+        templateName: 'Mi plan',
+        exercises: [for (final e in day.exercises) e.exercise],
+      ),
+    );
+  }
+
+  /// Beber más de este número de veces el objetivo de agua es demasiado.
+  static const waterExcessFactor = 2;
+
+  /// Texto de la píldora de Inicio para el día [now]:
+  /// - "Hoy: entreno hecho" si ya ha entrenado (aunque fuera de descanso);
+  /// - "Hoy: descanso" si en su plan no le toca entrenar;
+  /// - "Mar: hora de entrenar" en el resto de casos (también si aún no
+  ///   tiene plan).
+  String todayStatus(DateTime now) {
+    if (trainedOn(now)) return 'Hoy: entreno hecho';
+    final currentPlan = plan;
+    if (currentPlan != null && currentPlan.dayFor(now.weekday) == null) {
+      return 'Hoy: descanso';
+    }
+    // "Mar", "Mié"…: las tres primeras letras del nombre del día.
+    final shortDay = ProfileOptions.weekdayNames[now.weekday - 1].substring(
+      0,
+      3,
+    );
+    return '$shortDay: hora de entrenar';
+  }
+
+  /// Mensaje al sumar agua, o null si no hay nada especial que decir.
+  /// Solo sale al cruzar un límite (pasar de [beforeMl] a [afterMl]), no
+  /// en cada vaso.
+  String? waterMessage(int beforeMl, int afterMl) {
+    final goal = waterGoalMl;
+    final tooMuch = goal * waterExcessFactor;
+    if (beforeMl <= tooMuch && afterMl > tooMuch) {
+      return 'Estás bebiendo mucha agua, ten cuidado';
+    }
+    if (beforeMl < goal && afterMl >= goal) {
+      return '¡Objetivo de agua cumplido!';
+    }
+    return null;
+  }
+
+  /// Objetivo de agua del perfil de la sesión (ver [waterGoalMlFor]).
+  int get waterGoalMl => waterGoalMlFor(user);
+
+  /// Objetivo de agua orientativo: 35 ml por kg, redondeado a 100 ml.
+  /// Es un método aparte porque un getter no puede recibir parámetros.
+  int waterGoalMlFor(UserProfile? profile) {
+    final ml = (profile?.weightKg ?? 75) * 35;
+    return (ml / 100).round() * 100;
+  }
+}
+
+/// Lo que muestra Inicio en "Entreno de hoy": el día, el nombre del entreno
+/// ("Empuje"), la rutina con los ejercicios (para contarlos y para empezar
+/// el entreno) y si es la que ha asignado el entrenador.
+class DayWorkout {
+  const DayWorkout({
+    required this.weekday,
+    required this.name,
+    required this.routine,
+    this.planDay,
+    this.fromTrainer = false,
+  });
+
+  /// 1 = lunes … 7 = domingo.
+  final int weekday;
+  final String name;
+  final Routine routine;
+
+  /// Día del plan del que sale, con sus series, repeticiones y descanso.
+  /// Null si es la rutina del entrenador.
+  final PlanDay? planDay;
+  final bool fromTrainer;
+
+  /// "Hoy · Martes" si es [todayWeekday]; si no, solo "Jueves".
+  String dayLabel(int todayWeekday) {
+    final dayName = ProfileOptions.weekdayNames[weekday.clamp(1, 7) - 1];
+    return weekday == todayWeekday ? 'Hoy · $dayName' : dayName;
+  }
+
+  /// "6 ejercicios" (o "1 ejercicio").
+  String get exerciseCountLabel {
+    final count = routine.exercises.length;
+    return '$count ${count == 1 ? 'ejercicio' : 'ejercicios'}';
+  }
+
+  /// Los ejercicios con su objetivo (series, repeticiones y descanso), como
+  /// empezarán en el entrenamiento: los del plan o, si es la rutina del
+  /// entrenador, con los valores por defecto. Los usa la vista previa.
+  List<DraftExercise> get plannedExercises {
+    final day = planDay;
+    if (day != null) {
+      return [for (final e in day.exercises) DraftExercise.fromPlan(e)];
+    }
+    return [for (final e in routine.exercises) DraftExercise.basic(e)];
+  }
+}
+
+/// Litros para mostrar a partir de mililitros: hasta dos decimales, sin
+/// ceros sobrantes al final y con coma decimal.
+/// 250 → "0,25"; 500 → "0,5"; 1000 → "1"; 1250 → "1,25".
+String formatLiters(int ml) {
+  final fixed = (ml / 1000).toStringAsFixed(2); // 500 → "0.50"
+  // Quita los ceros finales y, si se queda sin decimales, también el punto.
+  final trimmed = fixed.replaceFirst(RegExp(r'\.?0+$'), '');
+  return trimmed.replaceAll('.', ',');
 }

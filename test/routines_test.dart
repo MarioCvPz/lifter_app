@@ -1,22 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:lifter_app/data/app_store.dart';
-import 'package:lifter_app/data/stats.dart';
 import 'package:lifter_app/models/models.dart';
 import 'package:lifter_app/screens/routines/routine_widgets.dart';
 
 import 'helpers.dart';
-
-Routine template(String id, int days) => Routine(
-  id: id,
-  name: 'Plantilla $days días',
-  description: '',
-  templateName: 'Plantilla',
-  isTemplate: true,
-  recommendedDays: days,
-  exercises: const [bench],
-);
 
 void main() {
   testWidgets('CP-06 Una rutina necesita nombre y al menos un ejercicio', (
@@ -77,25 +65,5 @@ void main() {
     // 3 ejercicios × 5 min.
     expect(routine.estimatedMin, 15);
     expect(routine.muscleGroups, ['Pecho', 'Piernas', 'Espalda']);
-  });
-
-  test('La rutina recomendada depende de los días por semana', () {
-    final store = AppStore();
-    // Sin plantillas en el catálogo no hay recomendación.
-    expect(store.recommendedRoutine(), isNull);
-
-    store.templates.addAll([
-      template('full', 3),
-      template('ul', 4),
-      template('ppl', 6),
-    ]);
-    store.user = profile(daysPerWeek: 3);
-    expect(store.recommendedRoutine()?.id, 'full');
-    store.user = profile(daysPerWeek: 4);
-    expect(store.recommendedRoutine()?.id, 'ul');
-    store.user = profile(daysPerWeek: 5);
-    expect(store.recommendedRoutine()?.id, 'ul');
-    store.user = profile(daysPerWeek: 7);
-    expect(store.recommendedRoutine()?.id, 'ppl');
   });
 }

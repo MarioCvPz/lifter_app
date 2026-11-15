@@ -1,24 +1,1091 @@
 {
-  "_comment": "Datos iniciales del catálogo. No los lee la app en el día a día: solo se suben a Firestore cuando un admin pulsa 'Cargar catálogo inicial'. Después se editan desde el panel de administración.",
+  "_comment": "Datos iniciales del catálogo. No los lee la app en el día a día: solo se suben a Firestore cuando un admin pulsa 'Cargar catálogo inicial' o 'Actualizar ejercicios'. Los ejercicios ex1-ex10 conservan su id porque las plantillas los usan. Campos nuevos de cada ejercicio: pattern (patrón de movimiento), type (multiarticular/aislamiento) y stressedZones (zonas que carga, para las lesiones).",
   "exercises": [
-    { "id": "ex1", "name": "Press de banca", "muscleGroup": "Pecho", "equipment": "Barra", "level": "Intermedio" },
-    { "id": "ex2", "name": "Sentadilla", "muscleGroup": "Piernas", "equipment": "Barra", "level": "Intermedio" },
-    { "id": "ex3", "name": "Peso muerto", "muscleGroup": "Espalda", "equipment": "Barra", "level": "Avanzado" },
-    { "id": "ex4", "name": "Dominadas", "muscleGroup": "Espalda", "equipment": "Peso corporal", "level": "Intermedio" },
-    { "id": "ex5", "name": "Press militar", "muscleGroup": "Hombros", "equipment": "Barra", "level": "Intermedio" },
-    { "id": "ex6", "name": "Remo con barra", "muscleGroup": "Espalda", "equipment": "Barra", "level": "Intermedio" },
-    { "id": "ex7", "name": "Curl de bíceps", "muscleGroup": "Brazos", "equipment": "Mancuernas", "level": "Principiante" },
-    { "id": "ex8", "name": "Extensión de tríceps", "muscleGroup": "Brazos", "equipment": "Polea", "level": "Principiante" },
-    { "id": "ex9", "name": "Zancadas", "muscleGroup": "Piernas", "equipment": "Mancuernas", "level": "Principiante" },
-    { "id": "ex10", "name": "Plancha", "muscleGroup": "Core", "equipment": "Peso corporal", "level": "Principiante" }
+    {
+      "id": "ex1",
+      "name": "Press de banca",
+      "muscleGroup": "Pecho",
+      "equipment": "Barra",
+      "level": "Intermedio",
+      "pattern": "empuje_horizontal",
+      "type": "multiarticular",
+      "stressedZones": [
+        "hombro",
+        "codo",
+        "muñeca"
+      ]
+    },
+    {
+      "id": "ex2",
+      "name": "Sentadilla",
+      "muscleGroup": "Piernas",
+      "equipment": "Barra",
+      "level": "Intermedio",
+      "pattern": "sentadilla",
+      "type": "multiarticular",
+      "stressedZones": [
+        "rodilla",
+        "cadera",
+        "espalda baja"
+      ]
+    },
+    {
+      "id": "ex3",
+      "name": "Peso muerto",
+      "muscleGroup": "Piernas",
+      "equipment": "Barra",
+      "level": "Avanzado",
+      "pattern": "bisagra",
+      "type": "multiarticular",
+      "stressedZones": [
+        "espalda baja",
+        "cadera"
+      ]
+    },
+    {
+      "id": "ex4",
+      "name": "Dominadas",
+      "muscleGroup": "Espalda",
+      "equipment": "Barra de dominadas",
+      "level": "Intermedio",
+      "pattern": "tiron_vertical",
+      "type": "multiarticular",
+      "stressedZones": [
+        "hombro",
+        "codo"
+      ]
+    },
+    {
+      "id": "ex5",
+      "name": "Press militar",
+      "muscleGroup": "Hombros",
+      "equipment": "Barra",
+      "level": "Intermedio",
+      "pattern": "empuje_vertical",
+      "type": "multiarticular",
+      "stressedZones": [
+        "hombro",
+        "codo",
+        "muñeca",
+        "espalda baja"
+      ]
+    },
+    {
+      "id": "ex6",
+      "name": "Remo con barra",
+      "muscleGroup": "Espalda",
+      "equipment": "Barra",
+      "level": "Intermedio",
+      "pattern": "tiron_horizontal",
+      "type": "multiarticular",
+      "stressedZones": [
+        "espalda baja"
+      ]
+    },
+    {
+      "id": "ex7",
+      "name": "Curl de bíceps",
+      "muscleGroup": "Brazos",
+      "equipment": "Mancuernas",
+      "level": "Principiante",
+      "pattern": "biceps",
+      "type": "aislamiento",
+      "stressedZones": [
+        "codo"
+      ]
+    },
+    {
+      "id": "ex8",
+      "name": "Extensión de tríceps",
+      "muscleGroup": "Brazos",
+      "equipment": "Polea",
+      "level": "Principiante",
+      "pattern": "triceps",
+      "type": "aislamiento",
+      "stressedZones": [
+        "codo"
+      ]
+    },
+    {
+      "id": "ex9",
+      "name": "Zancadas",
+      "muscleGroup": "Piernas",
+      "equipment": "Mancuernas",
+      "level": "Principiante",
+      "pattern": "unilateral",
+      "type": "multiarticular",
+      "stressedZones": [
+        "rodilla",
+        "tobillo"
+      ]
+    },
+    {
+      "id": "ex10",
+      "name": "Plancha",
+      "muscleGroup": "Core",
+      "equipment": "Peso corporal",
+      "level": "Principiante",
+      "pattern": "core",
+      "type": "aislamiento",
+      "stressedZones": []
+    },
+    {
+      "id": "press_inclinado_con_barra",
+      "name": "Press inclinado con barra",
+      "muscleGroup": "Pecho",
+      "equipment": "Barra",
+      "level": "Intermedio",
+      "pattern": "empuje_horizontal",
+      "type": "multiarticular",
+      "stressedZones": [
+        "hombro",
+        "codo",
+        "muñeca"
+      ]
+    },
+    {
+      "id": "press_banca_con_mancuernas",
+      "name": "Press banca con mancuernas",
+      "muscleGroup": "Pecho",
+      "equipment": "Mancuernas",
+      "level": "Principiante",
+      "pattern": "empuje_horizontal",
+      "type": "multiarticular",
+      "stressedZones": [
+        "hombro",
+        "codo"
+      ]
+    },
+    {
+      "id": "press_inclinado_con_mancuernas",
+      "name": "Press inclinado con mancuernas",
+      "muscleGroup": "Pecho",
+      "equipment": "Mancuernas",
+      "level": "Principiante",
+      "pattern": "empuje_horizontal",
+      "type": "multiarticular",
+      "stressedZones": [
+        "hombro",
+        "codo"
+      ]
+    },
+    {
+      "id": "press_plano_en_smith",
+      "name": "Press plano en Smith",
+      "muscleGroup": "Pecho",
+      "equipment": "Máquinas",
+      "level": "Principiante",
+      "pattern": "empuje_horizontal",
+      "type": "multiarticular",
+      "stressedZones": [
+        "hombro",
+        "codo",
+        "muñeca"
+      ]
+    },
+    {
+      "id": "press_inclinado_en_smith",
+      "name": "Press inclinado en Smith",
+      "muscleGroup": "Pecho",
+      "equipment": "Máquinas",
+      "level": "Principiante",
+      "pattern": "empuje_horizontal",
+      "type": "multiarticular",
+      "stressedZones": [
+        "hombro",
+        "codo",
+        "muñeca"
+      ]
+    },
+    {
+      "id": "press_de_pecho_en_maquina",
+      "name": "Press de pecho en máquina",
+      "muscleGroup": "Pecho",
+      "equipment": "Máquinas",
+      "level": "Principiante",
+      "pattern": "empuje_horizontal",
+      "type": "multiarticular",
+      "stressedZones": [
+        "hombro"
+      ]
+    },
+    {
+      "id": "fondos_en_paralelas",
+      "name": "Fondos en paralelas",
+      "muscleGroup": "Pecho",
+      "equipment": "Máquinas",
+      "level": "Intermedio",
+      "pattern": "empuje_horizontal",
+      "type": "multiarticular",
+      "stressedZones": [
+        "hombro",
+        "codo"
+      ]
+    },
+    {
+      "id": "cruce_de_poleas",
+      "name": "Cruce de poleas",
+      "muscleGroup": "Pecho",
+      "equipment": "Polea",
+      "level": "Principiante",
+      "pattern": "pecho_aislamiento",
+      "type": "aislamiento",
+      "stressedZones": [
+        "hombro"
+      ]
+    },
+    {
+      "id": "pec_deck",
+      "name": "Pec deck",
+      "muscleGroup": "Pecho",
+      "equipment": "Máquinas",
+      "level": "Principiante",
+      "pattern": "pecho_aislamiento",
+      "type": "aislamiento",
+      "stressedZones": [
+        "hombro"
+      ]
+    },
+    {
+      "id": "flexiones",
+      "name": "Flexiones",
+      "muscleGroup": "Pecho",
+      "equipment": "Peso corporal",
+      "level": "Principiante",
+      "pattern": "empuje_horizontal",
+      "type": "multiarticular",
+      "stressedZones": [
+        "hombro",
+        "muñeca"
+      ]
+    },
+    {
+      "id": "flexiones_inclinadas",
+      "name": "Flexiones inclinadas",
+      "muscleGroup": "Pecho",
+      "equipment": "Peso corporal",
+      "level": "Principiante",
+      "pattern": "empuje_horizontal",
+      "type": "multiarticular",
+      "stressedZones": [
+        "muñeca"
+      ]
+    },
+    {
+      "id": "flexiones_declinadas",
+      "name": "Flexiones declinadas",
+      "muscleGroup": "Pecho",
+      "equipment": "Peso corporal",
+      "level": "Intermedio",
+      "pattern": "empuje_horizontal",
+      "type": "multiarticular",
+      "stressedZones": [
+        "hombro",
+        "muñeca"
+      ]
+    },
+    {
+      "id": "press_de_suelo_con_mancuernas",
+      "name": "Press de suelo con mancuernas",
+      "muscleGroup": "Pecho",
+      "equipment": "Mancuernas",
+      "level": "Principiante",
+      "pattern": "empuje_horizontal",
+      "type": "multiarticular",
+      "stressedZones": [
+        "codo"
+      ]
+    },
+    {
+      "id": "aperturas_con_banda",
+      "name": "Aperturas con banda",
+      "muscleGroup": "Pecho",
+      "equipment": "Bandas elásticas",
+      "level": "Principiante",
+      "pattern": "pecho_aislamiento",
+      "type": "aislamiento",
+      "stressedZones": [
+        "hombro"
+      ]
+    },
+    {
+      "id": "press_de_hombros_con_mancuernas",
+      "name": "Press de hombros con mancuernas",
+      "muscleGroup": "Hombros",
+      "equipment": "Mancuernas",
+      "level": "Principiante",
+      "pattern": "empuje_vertical",
+      "type": "multiarticular",
+      "stressedZones": [
+        "hombro",
+        "codo"
+      ]
+    },
+    {
+      "id": "press_de_hombros_en_maquina",
+      "name": "Press de hombros en máquina",
+      "muscleGroup": "Hombros",
+      "equipment": "Máquinas",
+      "level": "Principiante",
+      "pattern": "empuje_vertical",
+      "type": "multiarticular",
+      "stressedZones": [
+        "hombro"
+      ]
+    },
+    {
+      "id": "flexiones_en_pica",
+      "name": "Flexiones en pica",
+      "muscleGroup": "Hombros",
+      "equipment": "Peso corporal",
+      "level": "Intermedio",
+      "pattern": "empuje_vertical",
+      "type": "multiarticular",
+      "stressedZones": [
+        "hombro",
+        "muñeca"
+      ]
+    },
+    {
+      "id": "elevaciones_laterales_con_mancuernas",
+      "name": "Elevaciones laterales con mancuernas",
+      "muscleGroup": "Hombros",
+      "equipment": "Mancuernas",
+      "level": "Principiante",
+      "pattern": "hombro_lateral",
+      "type": "aislamiento",
+      "stressedZones": [
+        "hombro"
+      ]
+    },
+    {
+      "id": "elevaciones_laterales_en_polea",
+      "name": "Elevaciones laterales en polea",
+      "muscleGroup": "Hombros",
+      "equipment": "Polea",
+      "level": "Principiante",
+      "pattern": "hombro_lateral",
+      "type": "aislamiento",
+      "stressedZones": [
+        "hombro"
+      ]
+    },
+    {
+      "id": "elevaciones_laterales_con_banda",
+      "name": "Elevaciones laterales con banda",
+      "muscleGroup": "Hombros",
+      "equipment": "Bandas elásticas",
+      "level": "Principiante",
+      "pattern": "hombro_lateral",
+      "type": "aislamiento",
+      "stressedZones": [
+        "hombro"
+      ]
+    },
+    {
+      "id": "pajaros_con_mancuernas",
+      "name": "Pájaros con mancuernas",
+      "muscleGroup": "Hombros",
+      "equipment": "Mancuernas",
+      "level": "Principiante",
+      "pattern": "hombro_posterior",
+      "type": "aislamiento",
+      "stressedZones": [
+        "hombro"
+      ]
+    },
+    {
+      "id": "face_pull_en_polea",
+      "name": "Face pull en polea",
+      "muscleGroup": "Hombros",
+      "equipment": "Polea",
+      "level": "Principiante",
+      "pattern": "hombro_posterior",
+      "type": "aislamiento",
+      "stressedZones": [
+        "hombro"
+      ]
+    },
+    {
+      "id": "face_pull_con_banda",
+      "name": "Face pull con banda",
+      "muscleGroup": "Hombros",
+      "equipment": "Bandas elásticas",
+      "level": "Principiante",
+      "pattern": "hombro_posterior",
+      "type": "aislamiento",
+      "stressedZones": [
+        "hombro"
+      ]
+    },
+    {
+      "id": "pec_deck_inverso",
+      "name": "Pec deck inverso",
+      "muscleGroup": "Hombros",
+      "equipment": "Máquinas",
+      "level": "Principiante",
+      "pattern": "hombro_posterior",
+      "type": "aislamiento",
+      "stressedZones": [
+        "hombro"
+      ]
+    },
+    {
+      "id": "dominadas_asistidas_en_maquina",
+      "name": "Dominadas asistidas en máquina",
+      "muscleGroup": "Espalda",
+      "equipment": "Máquinas",
+      "level": "Principiante",
+      "pattern": "tiron_vertical",
+      "type": "multiarticular",
+      "stressedZones": [
+        "hombro"
+      ]
+    },
+    {
+      "id": "jalon_al_pecho",
+      "name": "Jalón al pecho",
+      "muscleGroup": "Espalda",
+      "equipment": "Polea",
+      "level": "Principiante",
+      "pattern": "tiron_vertical",
+      "type": "multiarticular",
+      "stressedZones": [
+        "hombro"
+      ]
+    },
+    {
+      "id": "jalon_con_agarre_estrecho",
+      "name": "Jalón con agarre estrecho",
+      "muscleGroup": "Espalda",
+      "equipment": "Polea",
+      "level": "Principiante",
+      "pattern": "tiron_vertical",
+      "type": "multiarticular",
+      "stressedZones": [
+        "hombro",
+        "codo"
+      ]
+    },
+    {
+      "id": "jalon_con_banda",
+      "name": "Jalón con banda",
+      "muscleGroup": "Espalda",
+      "equipment": "Bandas elásticas",
+      "level": "Principiante",
+      "pattern": "tiron_vertical",
+      "type": "multiarticular",
+      "stressedZones": [
+        "hombro"
+      ]
+    },
+    {
+      "id": "remo_con_mancuerna_a_una_mano",
+      "name": "Remo con mancuerna a una mano",
+      "muscleGroup": "Espalda",
+      "equipment": "Mancuernas",
+      "level": "Principiante",
+      "pattern": "tiron_horizontal",
+      "type": "multiarticular",
+      "stressedZones": []
+    },
+    {
+      "id": "remo_en_polea_baja",
+      "name": "Remo en polea baja",
+      "muscleGroup": "Espalda",
+      "equipment": "Polea",
+      "level": "Principiante",
+      "pattern": "tiron_horizontal",
+      "type": "multiarticular",
+      "stressedZones": []
+    },
+    {
+      "id": "remo_en_maquina",
+      "name": "Remo en máquina",
+      "muscleGroup": "Espalda",
+      "equipment": "Máquinas",
+      "level": "Principiante",
+      "pattern": "tiron_horizontal",
+      "type": "multiarticular",
+      "stressedZones": []
+    },
+    {
+      "id": "remo_en_t",
+      "name": "Remo en T",
+      "muscleGroup": "Espalda",
+      "equipment": "Barra",
+      "level": "Intermedio",
+      "pattern": "tiron_horizontal",
+      "type": "multiarticular",
+      "stressedZones": [
+        "espalda baja"
+      ]
+    },
+    {
+      "id": "remo_invertido",
+      "name": "Remo invertido",
+      "muscleGroup": "Espalda",
+      "equipment": "Peso corporal",
+      "level": "Principiante",
+      "pattern": "tiron_horizontal",
+      "type": "multiarticular",
+      "stressedZones": []
+    },
+    {
+      "id": "remo_con_banda",
+      "name": "Remo con banda",
+      "muscleGroup": "Espalda",
+      "equipment": "Bandas elásticas",
+      "level": "Principiante",
+      "pattern": "tiron_horizontal",
+      "type": "multiarticular",
+      "stressedZones": []
+    },
+    {
+      "id": "curl_con_barra",
+      "name": "Curl con barra",
+      "muscleGroup": "Brazos",
+      "equipment": "Barra",
+      "level": "Principiante",
+      "pattern": "biceps",
+      "type": "aislamiento",
+      "stressedZones": [
+        "codo",
+        "muñeca"
+      ]
+    },
+    {
+      "id": "curl_martillo",
+      "name": "Curl martillo",
+      "muscleGroup": "Brazos",
+      "equipment": "Mancuernas",
+      "level": "Principiante",
+      "pattern": "biceps",
+      "type": "aislamiento",
+      "stressedZones": [
+        "codo"
+      ]
+    },
+    {
+      "id": "curl_en_polea",
+      "name": "Curl en polea",
+      "muscleGroup": "Brazos",
+      "equipment": "Polea",
+      "level": "Principiante",
+      "pattern": "biceps",
+      "type": "aislamiento",
+      "stressedZones": [
+        "codo"
+      ]
+    },
+    {
+      "id": "curl_predicador",
+      "name": "Curl predicador",
+      "muscleGroup": "Brazos",
+      "equipment": "Máquinas",
+      "level": "Principiante",
+      "pattern": "biceps",
+      "type": "aislamiento",
+      "stressedZones": [
+        "codo"
+      ]
+    },
+    {
+      "id": "curl_con_banda",
+      "name": "Curl con banda",
+      "muscleGroup": "Brazos",
+      "equipment": "Bandas elásticas",
+      "level": "Principiante",
+      "pattern": "biceps",
+      "type": "aislamiento",
+      "stressedZones": [
+        "codo"
+      ]
+    },
+    {
+      "id": "press_frances",
+      "name": "Press francés",
+      "muscleGroup": "Brazos",
+      "equipment": "Barra",
+      "level": "Intermedio",
+      "pattern": "triceps",
+      "type": "aislamiento",
+      "stressedZones": [
+        "codo"
+      ]
+    },
+    {
+      "id": "extension_por_encima_de_la_cabeza_en_polea",
+      "name": "Extensión por encima de la cabeza en polea",
+      "muscleGroup": "Brazos",
+      "equipment": "Polea",
+      "level": "Principiante",
+      "pattern": "triceps",
+      "type": "aislamiento",
+      "stressedZones": [
+        "codo",
+        "hombro"
+      ]
+    },
+    {
+      "id": "press_banca_con_agarre_cerrado",
+      "name": "Press banca con agarre cerrado",
+      "muscleGroup": "Brazos",
+      "equipment": "Barra",
+      "level": "Intermedio",
+      "pattern": "triceps",
+      "type": "multiarticular",
+      "stressedZones": [
+        "codo",
+        "muñeca",
+        "hombro"
+      ]
+    },
+    {
+      "id": "fondos_en_silla",
+      "name": "Fondos en silla",
+      "muscleGroup": "Brazos",
+      "equipment": "Peso corporal",
+      "level": "Principiante",
+      "pattern": "triceps",
+      "type": "multiarticular",
+      "stressedZones": [
+        "hombro",
+        "codo",
+        "muñeca"
+      ]
+    },
+    {
+      "id": "extension_de_triceps_con_mancuerna",
+      "name": "Extensión de tríceps con mancuerna",
+      "muscleGroup": "Brazos",
+      "equipment": "Mancuernas",
+      "level": "Principiante",
+      "pattern": "triceps",
+      "type": "aislamiento",
+      "stressedZones": [
+        "codo",
+        "hombro"
+      ]
+    },
+    {
+      "id": "flexiones_diamante",
+      "name": "Flexiones diamante",
+      "muscleGroup": "Brazos",
+      "equipment": "Peso corporal",
+      "level": "Intermedio",
+      "pattern": "triceps",
+      "type": "multiarticular",
+      "stressedZones": [
+        "codo",
+        "muñeca"
+      ]
+    },
+    {
+      "id": "sentadilla_frontal",
+      "name": "Sentadilla frontal",
+      "muscleGroup": "Piernas",
+      "equipment": "Barra",
+      "level": "Avanzado",
+      "pattern": "sentadilla",
+      "type": "multiarticular",
+      "stressedZones": [
+        "rodilla",
+        "espalda baja",
+        "muñeca"
+      ]
+    },
+    {
+      "id": "sentadilla_en_smith",
+      "name": "Sentadilla en Smith",
+      "muscleGroup": "Piernas",
+      "equipment": "Máquinas",
+      "level": "Principiante",
+      "pattern": "sentadilla",
+      "type": "multiarticular",
+      "stressedZones": [
+        "rodilla",
+        "espalda baja"
+      ]
+    },
+    {
+      "id": "sentadilla_hack",
+      "name": "Sentadilla hack",
+      "muscleGroup": "Piernas",
+      "equipment": "Máquinas",
+      "level": "Principiante",
+      "pattern": "sentadilla",
+      "type": "multiarticular",
+      "stressedZones": [
+        "rodilla"
+      ]
+    },
+    {
+      "id": "sentadilla_pendular",
+      "name": "Sentadilla pendular",
+      "muscleGroup": "Piernas",
+      "equipment": "Máquinas",
+      "level": "Principiante",
+      "pattern": "sentadilla",
+      "type": "multiarticular",
+      "stressedZones": [
+        "rodilla"
+      ]
+    },
+    {
+      "id": "prensa_de_piernas",
+      "name": "Prensa de piernas",
+      "muscleGroup": "Piernas",
+      "equipment": "Máquinas",
+      "level": "Principiante",
+      "pattern": "sentadilla",
+      "type": "multiarticular",
+      "stressedZones": [
+        "rodilla",
+        "cadera"
+      ]
+    },
+    {
+      "id": "prensa_pendular",
+      "name": "Prensa pendular",
+      "muscleGroup": "Piernas",
+      "equipment": "Máquinas",
+      "level": "Principiante",
+      "pattern": "sentadilla",
+      "type": "multiarticular",
+      "stressedZones": [
+        "rodilla",
+        "cadera"
+      ]
+    },
+    {
+      "id": "prensa_unilateral",
+      "name": "Prensa unilateral",
+      "muscleGroup": "Piernas",
+      "equipment": "Máquinas",
+      "level": "Principiante",
+      "pattern": "unilateral",
+      "type": "multiarticular",
+      "stressedZones": [
+        "rodilla",
+        "cadera"
+      ]
+    },
+    {
+      "id": "sentadilla_goblet",
+      "name": "Sentadilla goblet",
+      "muscleGroup": "Piernas",
+      "equipment": "Mancuernas",
+      "level": "Principiante",
+      "pattern": "sentadilla",
+      "type": "multiarticular",
+      "stressedZones": [
+        "rodilla"
+      ]
+    },
+    {
+      "id": "sentadilla_con_peso_corporal",
+      "name": "Sentadilla con peso corporal",
+      "muscleGroup": "Piernas",
+      "equipment": "Peso corporal",
+      "level": "Principiante",
+      "pattern": "sentadilla",
+      "type": "multiarticular",
+      "stressedZones": [
+        "rodilla"
+      ]
+    },
+    {
+      "id": "peso_muerto_rumano",
+      "name": "Peso muerto rumano",
+      "muscleGroup": "Piernas",
+      "equipment": "Barra",
+      "level": "Intermedio",
+      "pattern": "bisagra",
+      "type": "multiarticular",
+      "stressedZones": [
+        "espalda baja"
+      ]
+    },
+    {
+      "id": "peso_muerto_rumano_con_mancuernas",
+      "name": "Peso muerto rumano con mancuernas",
+      "muscleGroup": "Piernas",
+      "equipment": "Mancuernas",
+      "level": "Principiante",
+      "pattern": "bisagra",
+      "type": "multiarticular",
+      "stressedZones": [
+        "espalda baja"
+      ]
+    },
+    {
+      "id": "hiperextensiones",
+      "name": "Hiperextensiones",
+      "muscleGroup": "Piernas",
+      "equipment": "Máquinas",
+      "level": "Principiante",
+      "pattern": "bisagra",
+      "type": "multiarticular",
+      "stressedZones": [
+        "espalda baja"
+      ]
+    },
+    {
+      "id": "hip_thrust_con_barra",
+      "name": "Hip thrust con barra",
+      "muscleGroup": "Piernas",
+      "equipment": "Barra",
+      "level": "Intermedio",
+      "pattern": "gluteo",
+      "type": "multiarticular",
+      "stressedZones": [
+        "cadera"
+      ]
+    },
+    {
+      "id": "puente_de_gluteo",
+      "name": "Puente de glúteo",
+      "muscleGroup": "Piernas",
+      "equipment": "Peso corporal",
+      "level": "Principiante",
+      "pattern": "gluteo",
+      "type": "aislamiento",
+      "stressedZones": []
+    },
+    {
+      "id": "abductores_en_maquina",
+      "name": "Abductores en máquina",
+      "muscleGroup": "Piernas",
+      "equipment": "Máquinas",
+      "level": "Principiante",
+      "pattern": "gluteo",
+      "type": "aislamiento",
+      "stressedZones": [
+        "cadera"
+      ]
+    },
+    {
+      "id": "sentadilla_bulgara",
+      "name": "Sentadilla búlgara",
+      "muscleGroup": "Piernas",
+      "equipment": "Mancuernas",
+      "level": "Intermedio",
+      "pattern": "unilateral",
+      "type": "multiarticular",
+      "stressedZones": [
+        "rodilla",
+        "cadera"
+      ]
+    },
+    {
+      "id": "step_up_al_banco",
+      "name": "Step-up al banco",
+      "muscleGroup": "Piernas",
+      "equipment": "Mancuernas",
+      "level": "Principiante",
+      "pattern": "unilateral",
+      "type": "multiarticular",
+      "stressedZones": [
+        "rodilla"
+      ]
+    },
+    {
+      "id": "extension_de_cuadriceps",
+      "name": "Extensión de cuádriceps",
+      "muscleGroup": "Piernas",
+      "equipment": "Máquinas",
+      "level": "Principiante",
+      "pattern": "cuadriceps_aislamiento",
+      "type": "aislamiento",
+      "stressedZones": [
+        "rodilla"
+      ]
+    },
+    {
+      "id": "curl_femoral_tumbado",
+      "name": "Curl femoral tumbado",
+      "muscleGroup": "Piernas",
+      "equipment": "Máquinas",
+      "level": "Principiante",
+      "pattern": "femoral_aislamiento",
+      "type": "aislamiento",
+      "stressedZones": []
+    },
+    {
+      "id": "curl_femoral_sentado",
+      "name": "Curl femoral sentado",
+      "muscleGroup": "Piernas",
+      "equipment": "Máquinas",
+      "level": "Principiante",
+      "pattern": "femoral_aislamiento",
+      "type": "aislamiento",
+      "stressedZones": []
+    },
+    {
+      "id": "gemelos_de_pie",
+      "name": "Gemelos de pie",
+      "muscleGroup": "Piernas",
+      "equipment": "Máquinas",
+      "level": "Principiante",
+      "pattern": "gemelo",
+      "type": "aislamiento",
+      "stressedZones": [
+        "tobillo"
+      ]
+    },
+    {
+      "id": "gemelos_sentado",
+      "name": "Gemelos sentado",
+      "muscleGroup": "Piernas",
+      "equipment": "Máquinas",
+      "level": "Principiante",
+      "pattern": "gemelo",
+      "type": "aislamiento",
+      "stressedZones": [
+        "tobillo"
+      ]
+    },
+    {
+      "id": "gemelos_a_una_pierna",
+      "name": "Gemelos a una pierna",
+      "muscleGroup": "Piernas",
+      "equipment": "Peso corporal",
+      "level": "Principiante",
+      "pattern": "gemelo",
+      "type": "aislamiento",
+      "stressedZones": [
+        "tobillo"
+      ]
+    },
+    {
+      "id": "plancha_lateral",
+      "name": "Plancha lateral",
+      "muscleGroup": "Core",
+      "equipment": "Peso corporal",
+      "level": "Principiante",
+      "pattern": "core",
+      "type": "aislamiento",
+      "stressedZones": []
+    },
+    {
+      "id": "dead_bug",
+      "name": "Dead bug",
+      "muscleGroup": "Core",
+      "equipment": "Peso corporal",
+      "level": "Principiante",
+      "pattern": "core",
+      "type": "aislamiento",
+      "stressedZones": []
+    },
+    {
+      "id": "elevacion_de_piernas_tumbado",
+      "name": "Elevación de piernas tumbado",
+      "muscleGroup": "Core",
+      "equipment": "Peso corporal",
+      "level": "Principiante",
+      "pattern": "core",
+      "type": "aislamiento",
+      "stressedZones": [
+        "espalda baja"
+      ]
+    },
+    {
+      "id": "crunch_en_polea",
+      "name": "Crunch en polea",
+      "muscleGroup": "Core",
+      "equipment": "Polea",
+      "level": "Principiante",
+      "pattern": "core",
+      "type": "aislamiento",
+      "stressedZones": []
+    },
+    {
+      "id": "crunch_abdominal_en_maquina",
+      "name": "Crunch abdominal en máquina",
+      "muscleGroup": "Core",
+      "equipment": "Máquinas",
+      "level": "Principiante",
+      "pattern": "core",
+      "type": "aislamiento",
+      "stressedZones": []
+    },
+    {
+      "id": "elevacion_de_piernas_colgado",
+      "name": "Elevación de piernas colgado",
+      "muscleGroup": "Core",
+      "equipment": "Barra de dominadas",
+      "level": "Intermedio",
+      "pattern": "core",
+      "type": "aislamiento",
+      "stressedZones": [
+        "hombro",
+        "espalda baja"
+      ]
+    },
+    {
+      "id": "rueda_abdominal",
+      "name": "Rueda abdominal",
+      "muscleGroup": "Core",
+      "equipment": "Peso corporal",
+      "level": "Intermedio",
+      "pattern": "core",
+      "type": "aislamiento",
+      "stressedZones": [
+        "espalda baja",
+        "hombro"
+      ]
+    }
   ],
   "foods": [
-    { "id": "f1", "name": "Pechuga de pollo", "kcalPer100": 110, "proteinPer100": 23, "carbsPer100": 0, "fatPer100": 1.5 },
-    { "id": "f2", "name": "Arroz blanco cocido", "kcalPer100": 130, "proteinPer100": 2.7, "carbsPer100": 28, "fatPer100": 0.3 },
-    { "id": "f3", "name": "Huevo entero", "kcalPer100": 143, "proteinPer100": 13, "carbsPer100": 1.1, "fatPer100": 9.5 },
-    { "id": "f4", "name": "Plátano", "kcalPer100": 89, "proteinPer100": 1.1, "carbsPer100": 23, "fatPer100": 0.3 },
-    { "id": "f5", "name": "Avena", "kcalPer100": 379, "proteinPer100": 13, "carbsPer100": 67, "fatPer100": 6.5 },
-    { "id": "f6", "name": "Yogur griego", "kcalPer100": 97, "proteinPer100": 9, "carbsPer100": 3.6, "fatPer100": 5 }
+    {
+      "id": "f1",
+      "name": "Pechuga de pollo",
+      "kcalPer100": 110,
+      "proteinPer100": 23,
+      "carbsPer100": 0,
+      "fatPer100": 1.5
+    },
+    {
+      "id": "f2",
+      "name": "Arroz blanco cocido",
+      "kcalPer100": 130,
+      "proteinPer100": 2.7,
+      "carbsPer100": 28,
+      "fatPer100": 0.3
+    },
+    {
+      "id": "f3",
+      "name": "Huevo entero",
+      "kcalPer100": 143,
+      "proteinPer100": 13,
+      "carbsPer100": 1.1,
+      "fatPer100": 9.5
+    },
+    {
+      "id": "f4",
+      "name": "Plátano",
+      "kcalPer100": 89,
+      "proteinPer100": 1.1,
+      "carbsPer100": 23,
+      "fatPer100": 0.3
+    },
+    {
+      "id": "f5",
+      "name": "Avena",
+      "kcalPer100": 379,
+      "proteinPer100": 13,
+      "carbsPer100": 67,
+      "fatPer100": 6.5
+    },
+    {
+      "id": "f6",
+      "name": "Yogur griego",
+      "kcalPer100": 97,
+      "proteinPer100": 9,
+      "carbsPer100": 3.6,
+      "fatPer100": 5
+    }
   ],
   "routineTemplates": [
     {
@@ -27,7 +1094,12 @@
       "description": "Plantilla para 3 días semanales. Cuerpo completo.",
       "templateName": "Full body",
       "recommendedDays": 3,
-      "exerciseIds": ["ex2", "ex1", "ex4", "ex10"]
+      "exerciseIds": [
+        "ex2",
+        "ex1",
+        "ex4",
+        "ex10"
+      ]
     },
     {
       "id": "tpl-ul",
@@ -35,7 +1107,12 @@
       "description": "Plantilla de 4 días: dos de torso y dos de pierna.",
       "templateName": "Torso/Pierna",
       "recommendedDays": 4,
-      "exerciseIds": ["ex1", "ex6", "ex2", "ex3"]
+      "exerciseIds": [
+        "ex1",
+        "ex6",
+        "ex2",
+        "ex3"
+      ]
     },
     {
       "id": "tpl-ppl",
@@ -43,7 +1120,12 @@
       "description": "Plantilla de 6 días o 3 días según disponibilidad.",
       "templateName": "Push/Pull/Legs",
       "recommendedDays": 6,
-      "exerciseIds": ["ex1", "ex5", "ex6", "ex2"]
+      "exerciseIds": [
+        "ex1",
+        "ex5",
+        "ex6",
+        "ex2"
+      ]
     }
   ]
 }

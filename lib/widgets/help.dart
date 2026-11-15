@@ -41,35 +41,27 @@ enum HelpTopic {
     (
       Icons.calendar_view_week,
       'Tu semana',
-      'De lunes a domingo. Hoy aparece en coral y los días que entrenaste '
-          'llevan un punto verde.',
+      'De lunes a domingo. Los días de entreno de tu plan llevan un punto y '
+          'hoy tiene el borde en coral. Toca un día para ver su entreno.',
     ),
     (
-      Icons.insights,
-      'Estadísticas',
-      'Calorías y proteína de hoy frente a tu objetivo, entrenos de esta '
-          'semana frente a tus días disponibles y volumen semanal (suma de '
-          'repeticiones × kg).',
-    ),
-    (
-      Icons.play_circle,
-      'Entrenamiento de hoy',
-      'Te sugiere una rutina: primero la de tu entrenador, si no la que '
-          'estás siguiendo y si no la recomendada para ti. Pulsa ▶ para '
-          'empezar a apuntar el entreno.',
-    ),
-    (
-      Icons.emoji_events,
-      'Reto semanal',
-      'Cuántos días has entrenado esta semana de los que tienes disponibles '
-          '(se cambian en Perfil).',
+      Icons.local_dining,
+      'Calorías',
+      'Lo que llevas hoy frente a tu objetivo. Tócalas para ir a '
+          'Nutrición.',
     ),
     (
       Icons.water_drop,
       'Agua',
-      'Pulsa + para sumar un vaso de 250 ml y − para quitarlo. Si te '
-          'equivocas, pulsa "Deshacer" en el aviso de abajo. El objetivo se '
-          'calcula con tu peso (35 ml por kg).',
+      'Pulsa + para sumar un vaso de 250 ml y − para quitarlo si te '
+          'equivocas. El objetivo se calcula con tu peso (35 ml por kg).',
+    ),
+    (
+      Icons.play_circle,
+      'Entreno de hoy',
+      'Los ejercicios del día según tu plan o, si tu entrenador te ha '
+          'asignado una rutina, la suya. Pulsa "Empezar entrenamiento" para '
+          'apuntarlo. Los días de descanso no aparece.',
     ),
   ]),
 
@@ -100,30 +92,40 @@ enum HelpTopic {
     ),
   ]),
 
-  registerWorkout('Cómo apuntar un entreno', [
+  registerWorkout('Cómo funciona el entrenamiento', [
     (
-      Icons.edit,
-      'Nombre y duración',
-      'Ponle un nombre a la sesión. Si dejas la duración vacía, se cuentan '
-          '5 minutos por cada ejercicio que apuntes.',
+      Icons.timer_outlined,
+      'Cronómetro',
+      'Arriba a la izquierda va el tiempo total. Empieza solo al abrir el '
+          'entrenamiento; al terminar puedes corregirlo.',
     ),
     (
-      Icons.add_circle_outline,
-      'Ejercicios',
-      'Pulsa "Añadir ejercicio" y elige uno del catálogo. Con la papelera '
-          'quitas un ejercicio.',
-    ),
-    (
-      Icons.format_list_numbered,
+      Icons.check_circle_outline,
       'Series',
-      'Escribe repeticiones y kg de cada serie. "Añadir serie" copia los '
-          'valores de la anterior; el botón − la quita.',
+      'Escribe kg y repeticiones y pulsa ✓ al acabar cada serie. En gris '
+          'ves lo que hiciste la última vez: si no escribes nada, se usa '
+          'eso. ✓✓ marca todas. Desliza una serie a la izquierda para '
+          'borrarla.',
     ),
     (
-      Icons.save,
-      'Guardar',
-      'Pulsa "Guardar" arriba. Si sales sin guardar y ya habías apuntado '
-          'algo, te preguntará antes de descartarlo.',
+      Icons.hourglass_bottom,
+      'Descanso',
+      'Con "Descanso automático", al marcar una serie empieza la cuenta '
+          'atrás del ejercicio. Con el reloj de arriba eliges otro tiempo.',
+    ),
+    (
+      Icons.more_horiz,
+      'Ejercicios',
+      'Con ⋯ en cada ejercicio puedes ver cómo se hace y tu historial, '
+          'sustituirlo, añadir otro después, dejar un comentario para tu '
+          'entrenador, moverlo o quitarlo.',
+    ),
+    (
+      Icons.flag_outlined,
+      'Terminar',
+      'Solo se guardan las series marcadas. Si has cambiado ejercicios de '
+          'tu plan o de tu rutina, te preguntará si quieres guardarlos para '
+          'la próxima vez.',
     ),
   ]),
 
@@ -189,8 +191,12 @@ enum HelpTopic {
     (
       Icons.tune,
       'Tu objetivo',
-      'Es orientativo y se calcula con tu peso y tu objetivo del Perfil. '
-          'Si los cambias, se recalcula.',
+      'Es orientativo. Partimos de tu metabolismo basal (fórmula de '
+          'Mifflin-St Jeor, con tu sexo, edad, altura y peso), lo '
+          'multiplicamos por tu actividad diaria y sumamos o restamos según '
+          'tu objetivo, sin bajar nunca del basal. La proteína es de 1,8 g '
+          'por kg (con un tope si hay sobrepeso), la grasa el 25 % de las calorías y el resto, hidratos. '
+          'Si cambias tus datos en el Perfil, se recalcula.',
     ),
   ]),
 
@@ -218,8 +224,10 @@ enum HelpTopic {
     (
       Icons.tune,
       'Para qué sirven',
-      'El peso y el objetivo ajustan tus objetivos de nutrición y agua. Los '
-          'días disponibles deciden la rutina recomendada y el reto semanal.',
+      'Tus datos físicos, tu actividad diaria y tu objetivo ajustan las '
+          'calorías y los macros; el peso, también el agua. Tus días, '
+          'minutos, material, lesiones, objetivo y experiencia deciden tu '
+          'plan de entrenamiento.',
     ),
     (
       Icons.badge,

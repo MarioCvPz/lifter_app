@@ -13,7 +13,7 @@ void main() {
   test('CP-04 Calorías y macros del día según los gramos registrados', () {
     final today = DateTime.now();
     final store = AppStore()
-      ..user = profile(weightKg: 80, goal: 'Hipertrofia')
+      ..user = profile(weightKg: 80, goal: TrainingGoal.muscleGain)
       ..nutritionLogs.addAll([
         NutritionEntry(id: '1', food: chicken, grams: 200, date: today),
         NutritionEntry(id: '2', food: rice, grams: 150, date: today),
@@ -31,29 +31,38 @@ void main() {
     expect(m.protein, closeTo(46 + 4.05, 0.01));
     expect(m.carbs, closeTo(42, 0.01));
 
-    // Objetivo: 80 kg × 33 kcal × 1,10 (hipertrofia) y 2 g de proteína/kg.
+    // Objetivo con NutritionCalculator. El perfil usa los valores por
+    // defecto: hombre, 178 cm, sin fecha de nacimiento (30 años) y
+    // sedentario (× 1,3).
+    // Basal: 10 × 80 + 6,25 × 178 − 5 × 30 + 5 = 1.767,5 kcal.
+    // Mantenimiento: 1.767,5 × 1,3 = 2.297,75; + 250 (ganar masa) = 2.548.
+    // Proteína: 1,8 × min(80; 25 × 1,78²) = 1,8 × 79,21 = 143 g.
     final t = store.macroTargets();
-    expect(t.kcal, closeTo(2904, 0.01));
-    expect(t.protein, 160);
+    expect(t.kcal, closeTo(2548, 0.01));
+    expect(t.protein, 143);
   });
 
-  testWidgets('CP-05 Agua: sumar, deshacer y quitar un vaso', (tester) async {
+  testWidgets('CP-05 Agua: sumar y quitar un vaso', (tester) async {
     final store = AppStore();
     await pumpScreen(tester, store, const HomeScreen());
 
     await tester.tap(find.byTooltip('Añadir 250 ml'));
     await tester.pump();
     await tester.tap(find.byTooltip('Añadir 250 ml'));
-    await tester.pumpAndSettle(); // espera a que entre el aviso
+    await tester.pumpAndSettle(); // daría tiempo a que entrase un aviso
     expect(store.waterMl, 500);
 
-    // "Deshacer" del aviso quita el último vaso.
-    expect(find.text('Deshacer'), findsOneWidget);
-    await tester.tap(find.text('Deshacer'));
+    // Sin aviso abajo: el cambio se ve en la cifra.
+    expect(find.byType(SnackBar), findsNothing);
+    // Sin perfil, el objetivo es 2,6 L (75 kg por defecto).
+    expect(find.text('0,5 / 2,6 L', findRichText: true), findsOneWidget);
+
+    // El botón − quita un vaso…
+    await tester.tap(find.byTooltip('Quitar 250 ml'));
     await tester.pump();
     expect(store.waterMl, 250);
 
-    // El botón − quita otro y ya no baja de 0.
+    // …y otro, y ya no baja de 0.
     await tester.tap(find.byTooltip('Quitar 250 ml'));
     await tester.pump();
     expect(store.waterMl, 0);

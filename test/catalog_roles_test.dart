@@ -15,11 +15,11 @@ void main() {
     final json = File('assets/seed/catalog.json').readAsStringSync();
     final seed = CatalogSeed.fromJson(jsonDecode(json) as Map<String, dynamic>);
 
-    expect(seed.exercises, hasLength(10));
+    expect(seed.exercises, hasLength(85));
     expect(seed.foods, hasLength(6));
     expect(seed.templates, hasLength(3));
     // Ids únicos.
-    expect({for (final e in seed.exercises) e.id}, hasLength(10));
+    expect({for (final e in seed.exercises) e.id}, hasLength(85));
     expect({for (final f in seed.foods) f.id}, hasLength(6));
     for (final t in seed.templates) {
       expect(t.isTemplate, isTrue);

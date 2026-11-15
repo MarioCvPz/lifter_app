@@ -10,6 +10,7 @@ import '../../widgets/help.dart';
 import '../admin/admin_screen.dart';
 import '../trainer/trainer_screen.dart';
 import 'edit_profile_screen.dart';
+import 'training_settings.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -76,6 +77,10 @@ class ProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _InfoRow(user: user),
+
+          // --- Ajustes de entrenamiento ---
+          const SizedBox(height: 28),
+          TrainingSettingsSection(profile: user),
 
           // --- Insignias ---
           const SizedBox(height: 28),
@@ -194,7 +199,7 @@ class _InfoRow extends StatelessWidget {
     final items = [
       ('${user.heightCm.toStringAsFixed(0)} cm', 'Altura'),
       ('${_kg(user.weightKg)} kg', 'Peso'),
-      (user.goal, 'Objetivo'),
+      (user.goal.label, 'Objetivo'),
       ('${user.daysPerWeek} días', 'Por semana'),
     ];
     final scheme = Theme.of(context).colorScheme;

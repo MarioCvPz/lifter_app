@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../data/app_store.dart';
 import '../../data/catalog.dart';
 import '../../models/models.dart';
+import '../onboarding/steps/injuries_step.dart';
 import '../routines/routine_widgets.dart';
 
 /// Pantallas del admin para editar el catálogo de Firestore: alimentos,
@@ -281,6 +282,17 @@ class ExercisesAdminScreen extends StatelessWidget {
     if (context.mounted) _snack(context, error, 'Ejercicio borrado.');
   }
 
+  /// "Pecho · Barra · Intermedio", y debajo el patrón y el tipo. Si el
+  /// ejercicio aún no tiene patrón (copia antigua), lo avisa para que el
+  /// admin lo complete.
+  static String _subtitle(Exercise e) {
+    final type = e.isCompound ? 'Multiarticular' : 'Aislamiento';
+    final generator = e.pattern == MovementPattern.other
+        ? 'Sin patrón: edítalo para el generador'
+        : '${e.pattern.label} · $type';
+    return '${e.muscleGroup} · ${e.equipment} · ${e.level}\n$generator';
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = SessionScope.of(context);
@@ -288,7 +300,7 @@ class ExercisesAdminScreen extends StatelessWidget {
       title: 'Ejercicios',
       items: store.exercises,
       name: (e) => e.name,
-      subtitle: (e) => '${e.muscleGroup} · ${e.equipment} · ${e.level}',
+      subtitle: _subtitle,
       onAdd: () => _edit(context),
       onEdit: (e) => _edit(context, e),
       onDelete: (e) => _delete(context, e),
@@ -322,6 +334,15 @@ class _ExerciseDialogState extends State<_ExerciseDialog> {
   );
   late String _level = widget.exercise?.level ?? Routine.levels.first;
 
+  // Datos para el generador de rutinas. Un ejercicio antiguo tiene el
+  // patrón "otro": se deja sin elegir para obligar a escoger uno.
+  late MovementPattern? _pattern =
+      widget.exercise?.pattern == MovementPattern.other
+      ? null
+      : widget.exercise?.pattern;
+  late bool _isCompound = widget.exercise?.isCompound ?? true;
+  late List<String> _zones = widget.exercise?.stressedZones ?? const [];
+
   @override
   void dispose() {
     _name.dispose();
@@ -340,7 +361,51 @@ class _ExerciseDialogState extends State<_ExerciseDialog> {
         muscleGroup: _group.text.trim(),
         equipment: _equipment.text.trim(),
         level: _level,
+        // El validador del desplegable asegura que hay patrón.
+        pattern: _pattern ?? MovementPattern.other,
+        isCompound: _isCompound,
+        stressedZones: _zones,
       ),
+    );
+  }
+
+  /// Patrón, tipo y zonas: los datos que usa el generador de rutinas.
+  Widget _generatorFields() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DropdownButtonFormField<MovementPattern>(
+          initialValue: _pattern,
+          // Ocupa el ancho del diálogo y recorta los textos largos.
+          isExpanded: true,
+          decoration: const InputDecoration(labelText: 'Patrón de movimiento'),
+          items: [
+            for (final p in MovementPattern.values)
+              if (p != MovementPattern.other)
+                DropdownMenuItem(value: p, child: Text(p.label)),
+          ],
+          validator: (p) => p == null ? 'Elige un patrón' : null,
+          onChanged: (p) => setState(() => _pattern = p),
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Multiarticular'),
+          subtitle: Text(
+            _isCompound
+                ? 'Mueve varias articulaciones (p. ej. sentadilla)'
+                : 'Aislamiento: una articulación (p. ej. curl)',
+          ),
+          value: _isCompound,
+          onChanged: (v) => setState(() => _isCompound = v),
+        ),
+        const Text('Zonas que carga'),
+        const SizedBox(height: 4),
+        // Los mismos chips que las lesiones del cuestionario.
+        InjuryPicker(
+          selected: _zones,
+          onChanged: (zones) => setState(() => _zones = zones),
+        ),
+      ],
     );
   }
 
@@ -409,6 +474,8 @@ class _ExerciseDialogState extends State<_ExerciseDialog> {
                   selected: {_level},
                   onSelectionChanged: (s) => setState(() => _level = s.first),
                 ),
+                const SizedBox(height: 12),
+                _generatorFields(),
               ],
             ),
           ),

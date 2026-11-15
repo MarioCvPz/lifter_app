@@ -396,6 +396,7 @@ class _ClientSheet extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final p = report.user.profile;
     final top = report.topExercises();
+    final comments = report.recentComments();
 
     return DraggableScrollableSheet(
       expand: false,
@@ -407,7 +408,7 @@ class _ClientSheet extends StatelessWidget {
         children: [
           Text(report.name, style: text.headlineSmall),
           Text(
-            '${p.email} · ${p.goal} · ${p.experience} · '
+            '${p.email} · ${p.goal.label} · ${p.experience} · '
             '${p.daysPerWeek} días/semana',
             style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
           ),
@@ -450,6 +451,18 @@ class _ClientSheet extends StatelessWidget {
                 trailing: Text(
                   'máx. ${e.bestKg.toStringAsFixed(e.bestKg % 1 == 0 ? 0 : 1)} kg',
                 ),
+              ),
+          ],
+          if (comments.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            SectionHeader('Comentarios recientes'),
+            for (final c in comments)
+              ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.chat_bubble_outline),
+                title: Text(c.text),
+                subtitle: Text('${c.exercise} · ${longDate(c.date)}'),
               ),
           ],
           const SizedBox(height: 20),

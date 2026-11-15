@@ -88,7 +88,8 @@ class _NutritionScreenState extends State<NutritionScreen> {
                   _macroRow('Grasas', macros.fat, targets.fat, 'g'),
                   const SizedBox(height: 4),
                   Text(
-                    'Objetivo orientativo según tu peso y objetivo del perfil.',
+                    'Objetivo orientativo según tus datos, tu actividad '
+                    'y tu objetivo del perfil.',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],

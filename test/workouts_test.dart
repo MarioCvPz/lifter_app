@@ -1,44 +1,49 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lifter_app/data/app_store.dart';
 import 'package:lifter_app/data/stats.dart';
+import 'package:lifter_app/data/workout_draft.dart';
 import 'package:lifter_app/models/models.dart';
-import 'package:lifter_app/screens/workouts/register_workout_screen.dart';
+import 'package:lifter_app/screens/workouts/live_workout_screen.dart';
 
 import 'helpers.dart';
 
 void main() {
-  testWidgets('CP-02 No se guarda un entreno sin ejercicios', (tester) async {
-    final store = AppStore();
-    await pumpScreen(tester, store, const RegisterWorkoutScreen());
-
-    await tester.tap(find.text('Guardar'));
-    await tester.pump();
-
-    expect(find.text('Añade al menos un ejercicio.'), findsOneWidget);
-    expect(store.workouts, isEmpty);
-    // Sigue en la pantalla de registro.
-    expect(find.text('Registrar entrenamiento'), findsOneWidget);
-  });
-
-  testWidgets('CP-03 Sin duración escrita se usan 5 minutos por ejercicio', (
+  testWidgets('CP-02 No se guarda un entreno sin ninguna serie marcada', (
     tester,
   ) async {
-    final store = AppStore()..exercises.addAll([bench, squat]);
-    await pumpScreen(tester, store, const RegisterWorkoutScreen());
+    final store = AppStore();
+    await pumpScreen(tester, store, const LiveWorkoutScreen());
 
-    expect(find.textContaining('(0 min)'), findsOneWidget);
+    final finish = find.text('Terminar entrenamiento');
+    await tester.ensureVisible(finish);
+    await tester.tap(finish);
+    await tester.pump();
 
-    for (final ex in [bench, squat]) {
-      await tester.tap(find.text('Añadir ejercicio'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(ex.name).last);
-      await tester.pumpAndSettle();
-    }
+    expect(
+      find.text('Marca al menos una serie para guardar el entrenamiento.'),
+      findsOneWidget,
+    );
+    expect(store.workouts, isEmpty);
+    // Sigue en la pantalla del entrenamiento.
+    expect(find.text('Entrenamiento'), findsWidgets);
+    // Se quita la pantalla para que se cancele el Timer del cronómetro.
+    await tester.pumpWidget(const SizedBox());
+  });
 
-    // 2 ejercicios × 5 min.
-    expect(find.textContaining('(10 min)'), findsOneWidget);
-    expect(Workout.minutesPerExercise, 5);
+  test('CP-03 La duración sale del cronómetro (mínimo 1 minuto)', () {
+    final start = DateTime(2026, 11, 2, 18);
+    final draft = WorkoutDraft.empty(start);
+
+    // 42 min 40 s se redondean a 43.
+    expect(
+      draft.durationMin(start.add(const Duration(minutes: 42, seconds: 40))),
+      43,
+    );
+    // 20 segundos cuentan como 1 minuto, y nunca menos.
+    expect(draft.durationMin(start.add(const Duration(seconds: 20))), 1);
+    expect(draft.durationMin(start), 1);
   });
 
   test('El volumen de un entreno es la suma de reps × kg', () {

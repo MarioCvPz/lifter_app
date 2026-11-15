@@ -17,13 +17,22 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _index = 0;
 
-  static const _pages = [
-    HomeScreen(),
-    WorkoutsScreen(),
-    RoutinesScreen(),
-    NutritionScreen(),
-    ProfileScreen(),
+  /// Posición de Nutrición en [_items]; Inicio abre esta pestaña al tocar
+  /// las calorías.
+  static const _nutritionIndex = 3;
+
+  // `late`: se crea la primera vez que se usa, cuando ya existe `this` y se
+  // puede pasar un método del State (en Java sería inicializarlo en el
+  // constructor).
+  late final _pages = [
+    HomeScreen(onOpenNutrition: () => _select(_nutritionIndex)),
+    const WorkoutsScreen(),
+    const RoutinesScreen(),
+    const NutritionScreen(),
+    const ProfileScreen(),
   ];
+
+  void _select(int index) => setState(() => _index = index);
 
   static const _items = [
     (Icons.home_outlined, Icons.home, 'Inicio'),
@@ -81,7 +90,7 @@ class _MainShellState extends State<MainShell> {
       label: label,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () => setState(() => _index = i),
+        onTap: () => _select(i),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           height: 48,
@@ -98,20 +107,29 @@ class _MainShellState extends State<MainShell> {
                   ]
                 : null,
           ),
+          // La pestaña seleccionada muestra solo el icono; las demás,
+          // icono y texto. El nombre sigue en Semantics para los lectores
+          // de pantalla.
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(selected ? selectedIcon : icon, size: 20, color: color),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.fade,
-                softWrap: false,
-                style: Theme.of(
-                  context,
-                ).textTheme.labelSmall?.copyWith(color: color),
+              Icon(
+                selected ? selectedIcon : icon,
+                size: selected ? 24 : 20,
+                color: color,
               ),
+              if (!selected) ...[
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.fade,
+                  softWrap: false,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelSmall?.copyWith(color: color),
+                ),
+              ],
             ],
           ),
         ),

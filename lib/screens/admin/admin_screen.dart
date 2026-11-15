@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/app_store.dart';
+import '../../data/catalog.dart';
 import '../../models/models.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/brand.dart';
@@ -341,6 +342,54 @@ class _CatalogTab extends StatelessWidget {
     );
   }
 
+  /// "1 plantilla" / "3 plantillas".
+  static String _templatesText(int n) =>
+      n == 1 ? '1 plantilla' : '$n plantillas';
+
+  /// Sube los ejercicios del archivo y crea las plantillas que faltan,
+  /// tras confirmar cuántos son.
+  Future<void> _updateExercises(BuildContext context) async {
+    final store = SessionScope.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    // Se lee el archivo antes para poder decir cuánto se va a subir.
+    final seed = await CatalogSeed.load();
+    final count = seed.exercises.length;
+    final newTemplates = store.missingSeedTemplates(seed).length;
+    if (!context.mounted) return;
+    final templatesPart = newTemplates == 0
+        ? '. No falta ninguna plantilla'
+        : ' y se crearán ${_templatesText(newTemplates)} que faltan';
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('¿Actualizar ejercicios?'),
+        content: Text(
+          'Se subirán $count ejercicios$templatesPart. Los ejercicios que '
+          'ya existen se sobrescriben y se actualizan en las plantillas. '
+          'Las plantillas que ya existen y los alimentos no se tocan.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Actualizar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final error = await store.updateExercisesFromSeed(seed);
+    final done = newTemplates == 0
+        ? '$count ejercicios actualizados.'
+        : '$count ejercicios actualizados y '
+              '${_templatesText(newTemplates)} '
+              '${newTemplates == 1 ? 'creada' : 'creadas'}.';
+    messenger.showSnackBar(SnackBar(content: Text(error ?? done)));
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = SessionScope.of(context);
@@ -407,8 +456,13 @@ class _CatalogTab extends StatelessWidget {
             onTap: () => open(const TemplatesAdminScreen()),
           ),
         ),
+        const SizedBox(height: 8),
+        TextButton.icon(
+          onPressed: () => _updateExercises(context),
+          icon: const Icon(Icons.sync),
+          label: const Text('Actualizar ejercicios desde el archivo'),
+        ),
         if (!store.catalogEmpty) ...[
-          const SizedBox(height: 8),
           TextButton.icon(
             onPressed: () => _seed(context),
             icon: const Icon(Icons.restore),

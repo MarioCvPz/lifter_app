@@ -122,7 +122,20 @@ class ClientReport {
       );
     return list.take(limit).toList();
   }
+
+  /// Comentarios de sus ejercicios en el periodo, del más reciente al más
+  /// antiguo (como mucho [limit]). Así el entrenador ve, por ejemplo,
+  /// "Molestia en el hombro en la última serie".
+  List<ExerciseComment> recentComments({int limit = 5}) => [
+    for (final w in inPeriod)
+      for (final e in w.exercises)
+        if ((e.comment ?? '').isNotEmpty)
+          (date: w.date, exercise: e.exercise.name, text: e.comment ?? ''),
+  ].take(limit).toList();
 }
+
+/// Comentario que el cliente dejó en un ejercicio durante un entreno.
+typedef ExerciseComment = ({DateTime date, String exercise, String text});
 
 class ExerciseSummary {
   ExerciseSummary(this.name);

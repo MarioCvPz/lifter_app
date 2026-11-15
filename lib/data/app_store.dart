@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import 'auth_service.dart';
 import 'catalog.dart';
+import 'routine_generator.dart';
 
 /// Estado de la app. La sesión va con Firebase Auth y los datos de cada
 /// usuario se guardan en Firestore bajo `users/{uid}`:
@@ -15,6 +16,7 @@ import 'catalog.dart';
 ///   - `users/{uid}/workouts`    → entrenamientos
 ///   - `users/{uid}/routines`    → rutinas propias
 ///   - `users/{uid}/nutrition`   → registros de comidas
+///   - `users/{uid}/plan/current` → plan de entrenamiento generado
 /// El catálogo es común a todos y también está en Firestore:
 ///   - `exercises`, `foods`, `routineTemplates` (solo los admins lo editan)
 /// Los datos calculados (rachas, macros…) están en stats.dart.
@@ -26,6 +28,11 @@ class AppStore extends ChangeNotifier {
   bool loading = false;
   UserProfile? user;
   bool get isLoggedIn => user != null;
+
+  /// True cuando ya se sabe cómo es el perfil en Firestore. Hasta entonces
+  /// [user] es un perfil provisional y no se puede decidir si mostrar el
+  /// cuestionario inicial.
+  bool profileLoaded = false;
 
   final List<Routine> _myRoutines = [];
   final List<Workout> workouts = [];
@@ -47,6 +54,10 @@ class AppStore extends ChangeNotifier {
 
   /// Rutinas que he asignado yo (solo entrenadores y admins).
   final List<AssignedRoutine> assignedByMe = [];
+
+  /// Plan de entrenamiento semanal (users/{uid}/plan/current), o null si
+  /// todavía no hay ninguno.
+  TrainingPlan? plan;
 
   /// Agua bebida hoy, en ml (users/{uid}/water/{aaaa-mm-dd}).
   int waterMl = 0;
@@ -84,6 +95,8 @@ class AppStore extends ChangeNotifier {
     foods.clear();
     templates.clear();
     waterMl = 0;
+    plan = null;
+    profileLoaded = false;
 
     if (fbUser == null) {
       user = null;
@@ -139,12 +152,28 @@ class AppStore extends ChangeNotifier {
               );
             notifyListeners();
           }, onError: _onError),
-      userDoc.snapshots().listen((snap) {
+      // includeMetadataChanges: también avisa cuando el servidor confirma
+      // lo que antes solo venía de la caché local.
+      userDoc.snapshots(includeMetadataChanges: true).listen((snap) {
         final data = snap.data();
-        if (data == null) return;
+        if (data == null) {
+          // Sin documento. Si lo dice la caché, aún no lo sabemos seguro;
+          // si lo dice el servidor, es una cuenta recién creada y se sigue
+          // con el perfil provisional.
+          if (snap.metadata.isFromCache) return;
+          profileLoaded = true;
+          notifyListeners();
+          return;
+        }
         user = UserProfile.fromMap(data);
+        profileLoaded = true;
         // El rol puede cambiar en cualquier momento (lo cambia un admin).
         _updateTrainerSub(uid);
+        notifyListeners();
+      }, onError: _onError),
+      _planDoc(uid).snapshots().listen((snap) {
+        final data = snap.data();
+        plan = data == null ? null : TrainingPlan.fromMap(data);
         notifyListeners();
       }, onError: _onError),
       _waterDoc(uid, DateTime.now()).snapshots().listen((snap) {
@@ -238,11 +267,143 @@ class AppStore extends ChangeNotifier {
     super.dispose();
   }
 
-  void updateProfile(UserProfile next) {
-    user = next;
+  /// Guarda las respuestas del cuestionario inicial, lo marca como hecho y
+  /// guarda [newPlan], el plan que se le ha enseñado en "Tu plan".
+  /// `daysPerWeek` se rellena con los días elegidos porque lo usan la
+  /// recomendación de rutina y las estadísticas del entrenador.
+  /// Espera a Firestore para que la pantalla
+  /// pueda mostrar un indicador y avisar si falla. Devuelve el mensaje de
+  /// error, o null si se guardó bien.
+  Future<String?> completeOnboarding(
+    UserProfile profile,
+    TrainingPlan newPlan,
+  ) async {
+    profile
+      ..onboardingCompleted = true
+      ..daysPerWeek = profile.trainingDays.length;
+    final error = await _saveProfileAndPlan(profile, newPlan);
+    if (error != null) return 'No se pudieron guardar tus respuestas: $error';
+    user = profile;
+    plan = newPlan;
     notifyListeners();
-    // merge: para no borrar el campo `role`, que no va en toMap().
-    _save(_userDoc(_uid).set(next.toMap(), SetOptions(merge: true)));
+    return null;
+  }
+
+  /// El único método para guardar cambios de días, minutos, material,
+  /// lesiones, objetivo o experiencia (lo usarán "Editar perfil" y
+  /// "Ajustes de entrenamiento"). Guarda el perfil y, si cambia algo de lo
+  /// que depende el plan, lo actualiza con [RoutineGenerator.update], que
+  /// respeta los cambios que hizo el usuario.
+  /// Devuelve un record con el error (o null) y los avisos del plan.
+  Future<({String? error, List<String> warnings})> saveTrainingProfile(
+    UserProfile next,
+  ) async {
+    next.daysPerWeek = next.trainingDays.length;
+    final update = _planUpdateFor(next);
+    final error = await _saveProfileAndPlan(next, update?.plan);
+    if (error != null) {
+      return (
+        error: 'No se pudieron guardar los cambios: $error',
+        warnings: const <String>[],
+      );
+    }
+    user = next;
+    if (update != null) plan = update.plan;
+    notifyListeners();
+    return (error: null, warnings: update?.warnings ?? const <String>[]);
+  }
+
+  /// Plan que corresponde a [next], o null si no hace falta tocarlo porque
+  /// no cambia nada de lo que lo afecta y el plan está generado con las
+  /// reglas actuales ([RoutineGenerator.isOutdated]). Si aún no había plan
+  /// (cuentas de antes del generador), se crea uno.
+  PlanUpdate? _planUpdateFor(UserProfile next) {
+    final current = plan;
+    if (current == null) {
+      return PlanUpdate(
+        plan: RoutineGenerator.generate(next, exercises),
+        warnings: const [],
+      );
+    }
+    final previous = user;
+    final unchanged = previous != null && previous.sameTrainingAs(next);
+    if (unchanged && !RoutineGenerator.isOutdated(current)) return null;
+    return RoutineGenerator.update(current, next, exercises);
+  }
+
+  /// Guarda el perfil y el plan (si no es null) a la vez, en un WriteBatch:
+  /// o se guardan los dos o ninguno. Devuelve el error de Firebase, o null.
+  Future<String?> _saveProfileAndPlan(
+    UserProfile profile,
+    TrainingPlan? newPlan,
+  ) async {
+    try {
+      final batch = _db.batch();
+      // merge: para no borrar el campo `role`, que no va en toMap().
+      batch.set(_userDoc(_uid), profile.toMap(), SetOptions(merge: true));
+      if (newPlan != null) batch.set(_planDoc(_uid), newPlan.toMap());
+      await batch.commit();
+      return null;
+    } on FirebaseException catch (e) {
+      return e.message ?? e.code;
+    }
+  }
+
+  // --- Cambios del usuario en un día del plan ---
+  // Los usará la pantalla de entrenamiento (prompt 5). Devuelven el mensaje
+  // de error, o null si se hizo el cambio.
+
+  static const _notTrainingDay = 'Ese día no es de entreno.';
+  static const _alreadyInDay = 'Ese ejercicio ya está en el entreno del día.';
+
+  /// Añade [exercise] al día [weekday] (1 = lunes) como ejercicio del
+  /// usuario (`isCustom`), con las series y repeticiones de su perfil.
+  String? addPlanExercise(int weekday, Exercise exercise) {
+    final day = plan?.dayFor(weekday);
+    final profile = user;
+    if (day == null || profile == null) return _notTrainingDay;
+    if (day.contains(exercise.id)) return _alreadyInDay;
+    _savePlanDay(day.withExercise(_customExercise(exercise, profile)));
+    return null;
+  }
+
+  /// Quita el ejercicio del día. No vuelve aunque se actualice el plan.
+  String? removePlanExercise(int weekday, String exerciseId) {
+    final day = plan?.dayFor(weekday);
+    if (day == null) return _notTrainingDay;
+    _savePlanDay(day.withoutExercise(exerciseId));
+    return null;
+  }
+
+  /// Cambia el ejercicio [oldId] por [replacement] en el mismo lugar. El
+  /// nuevo queda como del usuario y el antiguo, como quitado.
+  String? replacePlanExercise(int weekday, String oldId, Exercise replacement) {
+    final day = plan?.dayFor(weekday);
+    final profile = user;
+    if (day == null || profile == null) return _notTrainingDay;
+    if (day.contains(replacement.id)) return _alreadyInDay;
+    _savePlanDay(day.replacing(oldId, _customExercise(replacement, profile)));
+    return null;
+  }
+
+  /// Guarda [day] en el plan de una sola vez (con todos los cambios del
+  /// entreno en directo). Ver `WorkoutDraft.applyToPlanDay`.
+  void updatePlanDay(PlanDay day) => _savePlanDay(day);
+
+  PlanExercise _customExercise(Exercise exercise, UserProfile profile) =>
+      RoutineGenerator.prescribe(exercise, profile, isCustom: true);
+
+  /// Pone [day] en el plan y lo sube a Firestore sin esperar, como el resto
+  /// de escrituras.
+  void _savePlanDay(PlanDay day) {
+    final current = plan;
+    if (current == null) return;
+    final next = current.withDay(day);
+    plan = next;
+    notifyListeners();
+    final uid = _sessionUid;
+    if (uid == null) return; // en los tests no hay Firebase
+    _save(_planDoc(uid).set(next.toMap()));
   }
 
   // Las escrituras no se esperan: Firestore las aplica primero en local
@@ -381,6 +542,55 @@ class AppStore extends ChangeNotifier {
     }
   }
 
+  /// Plantillas del archivo cuyo id aún no está en Firestore. Compara con
+  /// [templates], que ya se mantiene al día con la escucha de
+  /// `routineTemplates`, así que no hace lecturas extra.
+  List<Routine> missingSeedTemplates(CatalogSeed seed) {
+    final existing = {for (final t in templates) t.id};
+    return [
+      for (final t in seed.templates)
+        if (!existing.contains(t.id)) t,
+    ];
+  }
+
+  /// Sube a Firestore los ejercicios de assets/seed/catalog.json y crea
+  /// las plantillas del archivo que todavía no existen:
+  /// - ejercicios: crea los nuevos y sobrescribe los que ya existen
+  ///   (ex1–ex10) con sus campos nuevos;
+  /// - plantillas que ya existen: solo se actualizan las copias de esos
+  ///   ejercicios, como en [saveExercise];
+  /// - plantillas que faltan ([missingSeedTemplates]): se crean.
+  /// No toca los alimentos ni el resto de lo que haya editado el admin.
+  /// [seed] permite pasar el archivo ya leído (la pantalla lo lee antes
+  /// para decir cuánto se sube). Devuelve el mensaje de error, o null si
+  /// fue bien.
+  Future<String?> updateExercisesFromSeed([CatalogSeed? seed]) async {
+    if (!isAdmin) return 'Solo un admin puede actualizar los ejercicios.';
+    try {
+      final data = seed ?? await CatalogSeed.load();
+      final byId = {for (final e in data.exercises) e.id: e};
+      // Todo en un WriteBatch: o se guarda todo o nada. Admite hasta 500
+      // operaciones y aquí hay 85 ejercicios más unas pocas plantillas.
+      final batch = _db.batch();
+      for (final e in data.exercises) {
+        batch.set(_catalog(CatalogCollections.exercises).doc(e.id), e.toMap());
+      }
+      for (final t in templates) {
+        if (!t.exercises.any((e) => byId.containsKey(e.id))) continue;
+        batch.update(_catalog(CatalogCollections.templates).doc(t.id), {
+          'exercises': [for (final e in t.exercises) (byId[e.id] ?? e).toMap()],
+        });
+      }
+      for (final t in missingSeedTemplates(data)) {
+        batch.set(_catalog(CatalogCollections.templates).doc(t.id), t.toMap());
+      }
+      await batch.commit();
+      return null;
+    } on FirebaseException catch (e) {
+      return 'No se pudieron actualizar los ejercicios: ${e.message ?? e.code}';
+    }
+  }
+
   /// Id nuevo para un documento del catálogo.
   String newCatalogId(String collection) => _catalog(collection).doc().id;
 
@@ -471,6 +681,9 @@ class AppStore extends ChangeNotifier {
         '${day.day.toString().padLeft(2, '0')}';
     return _userDoc(uid).collection('water').doc(key);
   }
+
+  DocumentReference<Map<String, dynamic>> _planDoc(String uid) =>
+      _userDoc(uid).collection('plan').doc('current');
 
   String get _uid => _auth.currentUser!.uid;
 

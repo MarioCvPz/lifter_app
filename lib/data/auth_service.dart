@@ -54,11 +54,7 @@ class AuthService {
       );
       final fbUser = cred.user!;
       await fbUser.updateDisplayName(name.trim());
-      final profile = UserProfile(
-        name: name.trim(),
-        username: _usernameFrom(name),
-        email: email.trim(),
-      );
+      final profile = _newProfile(name: name.trim(), email: email.trim());
       await _userDoc(fbUser.uid).set(profile.toMap());
       return null;
     } on FirebaseAuthException catch (e) {
@@ -145,7 +141,23 @@ class AuthService {
   static UserProfile defaultProfile(User fbUser) {
     final email = fbUser.email ?? '';
     final name = fbUser.displayName ?? email.split('@').first;
-    return UserProfile(name: name, username: _usernameFrom(name), email: email);
+    return _newProfile(name: name, email: email);
+  }
+
+  /// Perfil de una cuenta nueva. La altura y el peso van a 0 ("sin
+  /// rellenar") para que el cuestionario los muestre vacíos y obligue a
+  /// escribirlos.
+  static UserProfile _newProfile({
+    required String name,
+    required String email,
+  }) {
+    return UserProfile(
+      name: name,
+      username: _usernameFrom(name),
+      email: email,
+      heightCm: 0,
+      weightKg: 0,
+    );
   }
 
   static String _usernameFrom(String name) {

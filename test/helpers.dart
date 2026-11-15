@@ -1,12 +1,23 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lifter_app/data/app_store.dart';
+import 'package:lifter_app/data/catalog.dart';
 import 'package:lifter_app/models/models.dart';
 import 'package:lifter_app/theme/app_theme.dart';
 
 // Utilidades comunes de los tests. El AppStore se crea sin start(), así que
 // no conecta con Firebase: los datos se meten a mano en sus listas.
+
+/// Lee assets/seed/catalog.json directamente del disco (en los tests no
+/// hace falta rootBundle).
+CatalogSeed readSeed() {
+  final json = File('assets/seed/catalog.json').readAsStringSync();
+  return CatalogSeed.fromJson(jsonDecode(json) as Map<String, dynamic>);
+}
 
 const bench = Exercise(
   id: 'ex1',
@@ -73,7 +84,7 @@ Workout workoutOn(
 UserProfile profile({
   String name = 'Ana',
   double weightKg = 70,
-  String goal = 'Hipertrofia',
+  TrainingGoal goal = TrainingGoal.muscleGain,
   int daysPerWeek = 4,
   UserRole role = UserRole.user,
 }) => UserProfile(

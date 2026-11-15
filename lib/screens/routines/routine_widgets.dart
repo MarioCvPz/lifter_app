@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/models.dart';
 import '../../theme/app_theme.dart';
-import '../workouts/register_workout_screen.dart';
+import '../workouts/live_workout_screen.dart';
 
 /// Diálogo para crear una rutina (nombre, descripción y ejercicios) a partir
 /// de [exercises] (el catálogo). Con [initial] edita esa rutina manteniendo su
@@ -192,7 +192,7 @@ class _RoutineEditorDialogState extends State<_RoutineEditorDialog> {
 void startWorkoutFrom(BuildContext context, Routine routine) {
   Navigator.of(context).push(
     MaterialPageRoute(
-      builder: (_) => RegisterWorkoutScreen(fromRoutine: routine),
+      builder: (_) => LiveWorkoutScreen(routine: routine),
     ),
   );
 }
@@ -485,7 +485,7 @@ class _RoutineDetail extends StatelessWidget {
                   nav.push(
                     MaterialPageRoute(
                       builder: (_) =>
-                          RegisterWorkoutScreen(fromRoutine: routine),
+                          LiveWorkoutScreen(routine: routine),
                     ),
                   );
                 },
