@@ -1,0 +1,6 @@
+Inicio, que salga el entreno que tiene el usuario y debajo la cantidad de ejercicios, no todos los ejs de la rutina.
+En entrenamientos que salga algo similar a lo de la pantalla principal, que te salga el entreno que tienes, pulsarlo y que te lleve a una previsualizacion del entreno (ejs con sus series y reps) y puedas comenzar el entreno.
+que una persona avanzada no puede empezar por ejercicios de casa, deberia solo ejs de gimnasio
+Al registrar un entreno y añadir el ej, quiero que se vean mas ordenados, es decir, que los ejs esten divididos segun el grupo muscular y que asi se encuentren mejor
+que al añadir un vaso de agua, no quiero ver la notificacion, prefiero que salga directamente en su apartado, y que vaya de 0,25 en 0,25, porque en la app si sumo 250ml desde 0 me va a 0.3, 0,5, 0,8 y 1L , deberia ir de 0,25,0,5,0,75,1
+quita kettlebell que no se que es eso
