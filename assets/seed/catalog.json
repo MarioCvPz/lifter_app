@@ -1,5 +1,5 @@
 {
-  "_comment": "Datos iniciales del catálogo. No los lee la app en el día a día: solo se suben a Firestore cuando un admin pulsa 'Cargar catálogo inicial' o 'Actualizar ejercicios'. Los ejercicios ex1-ex10 conservan su id porque las plantillas los usan. Campos nuevos de cada ejercicio: pattern (patrón de movimiento), type (multiarticular/aislamiento) y stressedZones (zonas que carga, para las lesiones).",
+  "_comment": "Datos iniciales del catálogo. No los lee la app en el día a día: solo se suben a Firestore cuando un admin pulsa 'Cargar catálogo inicial', 'Actualizar ejercicios' o 'Actualizar alimentos'. Los alimentos tienen valores por 100 g (tablas BEDCA/USDA) y una categoría (category, ver FoodCategory). Los ejercicios ex1-ex10 conservan su id porque las plantillas los usan. Campos nuevos de cada ejercicio: pattern (patrón de movimiento), type (multiarticular/aislamiento) y stressedZones (zonas que carga, para las lesiones).",
   "exercises": [
     {
       "id": "ex1",
@@ -1041,50 +1041,1082 @@
     {
       "id": "f1",
       "name": "Pechuga de pollo",
+      "category": "meat",
       "kcalPer100": 110,
       "proteinPer100": 23,
       "carbsPer100": 0,
       "fatPer100": 1.5
     },
     {
-      "id": "f2",
-      "name": "Arroz blanco cocido",
-      "kcalPer100": 130,
-      "proteinPer100": 2.7,
-      "carbsPer100": 28,
-      "fatPer100": 0.3
+      "id": "f7",
+      "name": "Muslo de pollo sin piel",
+      "category": "meat",
+      "kcalPer100": 121,
+      "proteinPer100": 19.7,
+      "carbsPer100": 0,
+      "fatPer100": 4.1
+    },
+    {
+      "id": "f8",
+      "name": "Pechuga de pavo",
+      "category": "meat",
+      "kcalPer100": 107,
+      "proteinPer100": 24,
+      "carbsPer100": 0,
+      "fatPer100": 1
+    },
+    {
+      "id": "f9",
+      "name": "Ternera magra (filete)",
+      "category": "meat",
+      "kcalPer100": 131,
+      "proteinPer100": 21.3,
+      "carbsPer100": 0,
+      "fatPer100": 5.1
+    },
+    {
+      "id": "f10",
+      "name": "Carne picada de vacuno (15 % grasa)",
+      "category": "meat",
+      "kcalPer100": 215,
+      "proteinPer100": 18.6,
+      "carbsPer100": 0,
+      "fatPer100": 15
+    },
+    {
+      "id": "f11",
+      "name": "Lomo de cerdo",
+      "category": "meat",
+      "kcalPer100": 143,
+      "proteinPer100": 21,
+      "carbsPer100": 0,
+      "fatPer100": 6.3
+    },
+    {
+      "id": "f12",
+      "name": "Solomillo de cerdo",
+      "category": "meat",
+      "kcalPer100": 120,
+      "proteinPer100": 21,
+      "carbsPer100": 0,
+      "fatPer100": 3.5
+    },
+    {
+      "id": "f13",
+      "name": "Conejo",
+      "category": "meat",
+      "kcalPer100": 136,
+      "proteinPer100": 20,
+      "carbsPer100": 0,
+      "fatPer100": 5.6
+    },
+    {
+      "id": "f14",
+      "name": "Jamón serrano",
+      "category": "meat",
+      "kcalPer100": 241,
+      "proteinPer100": 30.5,
+      "carbsPer100": 0.5,
+      "fatPer100": 13
+    },
+    {
+      "id": "f15",
+      "name": "Jamón cocido",
+      "category": "meat",
+      "kcalPer100": 107,
+      "proteinPer100": 18,
+      "carbsPer100": 1.5,
+      "fatPer100": 3.2
+    },
+    {
+      "id": "f16",
+      "name": "Pechuga de pavo en lonchas",
+      "category": "meat",
+      "kcalPer100": 95,
+      "proteinPer100": 18,
+      "carbsPer100": 2,
+      "fatPer100": 1.5
+    },
+    {
+      "id": "f17",
+      "name": "Chorizo",
+      "category": "meat",
+      "kcalPer100": 455,
+      "proteinPer100": 24,
+      "carbsPer100": 2,
+      "fatPer100": 39
+    },
+    {
+      "id": "f18",
+      "name": "Salmón",
+      "category": "fish",
+      "kcalPer100": 208,
+      "proteinPer100": 20.4,
+      "carbsPer100": 0,
+      "fatPer100": 13.4
+    },
+    {
+      "id": "f19",
+      "name": "Merluza",
+      "category": "fish",
+      "kcalPer100": 82,
+      "proteinPer100": 17.5,
+      "carbsPer100": 0,
+      "fatPer100": 1.3
+    },
+    {
+      "id": "f20",
+      "name": "Atún al natural (lata)",
+      "category": "fish",
+      "kcalPer100": 111,
+      "proteinPer100": 25.5,
+      "carbsPer100": 0,
+      "fatPer100": 1
+    },
+    {
+      "id": "f21",
+      "name": "Atún en aceite escurrido (lata)",
+      "category": "fish",
+      "kcalPer100": 198,
+      "proteinPer100": 29,
+      "carbsPer100": 0,
+      "fatPer100": 8.2
+    },
+    {
+      "id": "f22",
+      "name": "Bacalao fresco",
+      "category": "fish",
+      "kcalPer100": 82,
+      "proteinPer100": 18,
+      "carbsPer100": 0,
+      "fatPer100": 0.7
+    },
+    {
+      "id": "f23",
+      "name": "Sardinas en aceite (lata)",
+      "category": "fish",
+      "kcalPer100": 208,
+      "proteinPer100": 24.6,
+      "carbsPer100": 0,
+      "fatPer100": 11.5
+    },
+    {
+      "id": "f24",
+      "name": "Gambas y langostinos",
+      "category": "fish",
+      "kcalPer100": 85,
+      "proteinPer100": 20.1,
+      "carbsPer100": 0,
+      "fatPer100": 0.5
+    },
+    {
+      "id": "f25",
+      "name": "Lubina",
+      "category": "fish",
+      "kcalPer100": 97,
+      "proteinPer100": 18.4,
+      "carbsPer100": 0,
+      "fatPer100": 2
+    },
+    {
+      "id": "f26",
+      "name": "Caballa",
+      "category": "fish",
+      "kcalPer100": 205,
+      "proteinPer100": 18.6,
+      "carbsPer100": 0,
+      "fatPer100": 13.9
+    },
+    {
+      "id": "f27",
+      "name": "Pulpo",
+      "category": "fish",
+      "kcalPer100": 82,
+      "proteinPer100": 15,
+      "carbsPer100": 2.2,
+      "fatPer100": 1
+    },
+    {
+      "id": "f28",
+      "name": "Surimi",
+      "category": "fish",
+      "kcalPer100": 99,
+      "proteinPer100": 15.2,
+      "carbsPer100": 6.9,
+      "fatPer100": 0.9
+    },
+    {
+      "id": "f29",
+      "name": "Mejillones",
+      "category": "fish",
+      "kcalPer100": 86,
+      "proteinPer100": 11.9,
+      "carbsPer100": 3.7,
+      "fatPer100": 2.2
     },
     {
       "id": "f3",
       "name": "Huevo entero",
+      "category": "eggsDairy",
       "kcalPer100": 143,
       "proteinPer100": 13,
       "carbsPer100": 1.1,
       "fatPer100": 9.5
     },
     {
-      "id": "f4",
-      "name": "Plátano",
-      "kcalPer100": 89,
-      "proteinPer100": 1.1,
-      "carbsPer100": 23,
+      "id": "f30",
+      "name": "Clara de huevo",
+      "category": "eggsDairy",
+      "kcalPer100": 52,
+      "proteinPer100": 10.9,
+      "carbsPer100": 0.7,
+      "fatPer100": 0.2
+    },
+    {
+      "id": "f6",
+      "name": "Yogur griego",
+      "category": "eggsDairy",
+      "kcalPer100": 97,
+      "proteinPer100": 9,
+      "carbsPer100": 3.6,
+      "fatPer100": 5
+    },
+    {
+      "id": "f31",
+      "name": "Yogur natural",
+      "category": "eggsDairy",
+      "kcalPer100": 61,
+      "proteinPer100": 3.5,
+      "carbsPer100": 4.7,
+      "fatPer100": 3.3
+    },
+    {
+      "id": "f32",
+      "name": "Yogur natural desnatado",
+      "category": "eggsDairy",
+      "kcalPer100": 56,
+      "proteinPer100": 5.7,
+      "carbsPer100": 7.7,
+      "fatPer100": 0.2
+    },
+    {
+      "id": "f33",
+      "name": "Leche entera",
+      "category": "eggsDairy",
+      "kcalPer100": 61,
+      "proteinPer100": 3.2,
+      "carbsPer100": 4.8,
+      "fatPer100": 3.3
+    },
+    {
+      "id": "f34",
+      "name": "Leche semidesnatada",
+      "category": "eggsDairy",
+      "kcalPer100": 46,
+      "proteinPer100": 3.3,
+      "carbsPer100": 4.8,
+      "fatPer100": 1.6
+    },
+    {
+      "id": "f35",
+      "name": "Leche desnatada",
+      "category": "eggsDairy",
+      "kcalPer100": 34,
+      "proteinPer100": 3.4,
+      "carbsPer100": 5,
+      "fatPer100": 0.1
+    },
+    {
+      "id": "f36",
+      "name": "Kéfir",
+      "category": "eggsDairy",
+      "kcalPer100": 42,
+      "proteinPer100": 3.8,
+      "carbsPer100": 4.5,
+      "fatPer100": 1
+    },
+    {
+      "id": "f37",
+      "name": "Queso fresco batido 0 %",
+      "category": "eggsDairy",
+      "kcalPer100": 46,
+      "proteinPer100": 8,
+      "carbsPer100": 3.5,
+      "fatPer100": 0.1
+    },
+    {
+      "id": "f38",
+      "name": "Queso cottage",
+      "category": "eggsDairy",
+      "kcalPer100": 98,
+      "proteinPer100": 11.1,
+      "carbsPer100": 3.4,
+      "fatPer100": 4.3
+    },
+    {
+      "id": "f39",
+      "name": "Queso fresco tipo Burgos",
+      "category": "eggsDairy",
+      "kcalPer100": 174,
+      "proteinPer100": 15,
+      "carbsPer100": 2.5,
+      "fatPer100": 11.5
+    },
+    {
+      "id": "f40",
+      "name": "Queso curado",
+      "category": "eggsDairy",
+      "kcalPer100": 394,
+      "proteinPer100": 26,
+      "carbsPer100": 0.5,
+      "fatPer100": 32
+    },
+    {
+      "id": "f41",
+      "name": "Mozzarella",
+      "category": "eggsDairy",
+      "kcalPer100": 299,
+      "proteinPer100": 22.2,
+      "carbsPer100": 2.2,
+      "fatPer100": 22.4
+    },
+    {
+      "id": "f2",
+      "name": "Arroz blanco cocido",
+      "category": "grains",
+      "kcalPer100": 130,
+      "proteinPer100": 2.7,
+      "carbsPer100": 28,
       "fatPer100": 0.3
+    },
+    {
+      "id": "f42",
+      "name": "Arroz blanco crudo",
+      "category": "grains",
+      "kcalPer100": 365,
+      "proteinPer100": 7.1,
+      "carbsPer100": 80,
+      "fatPer100": 0.7
+    },
+    {
+      "id": "f43",
+      "name": "Arroz integral cocido",
+      "category": "grains",
+      "kcalPer100": 123,
+      "proteinPer100": 2.7,
+      "carbsPer100": 25.6,
+      "fatPer100": 1
     },
     {
       "id": "f5",
       "name": "Avena",
+      "category": "grains",
       "kcalPer100": 379,
       "proteinPer100": 13,
       "carbsPer100": 67,
       "fatPer100": 6.5
     },
     {
-      "id": "f6",
-      "name": "Yogur griego",
-      "kcalPer100": 97,
+      "id": "f44",
+      "name": "Pasta cocida",
+      "category": "grains",
+      "kcalPer100": 158,
+      "proteinPer100": 5.8,
+      "carbsPer100": 31,
+      "fatPer100": 0.9
+    },
+    {
+      "id": "f45",
+      "name": "Pasta cruda",
+      "category": "grains",
+      "kcalPer100": 371,
+      "proteinPer100": 13,
+      "carbsPer100": 75,
+      "fatPer100": 1.5
+    },
+    {
+      "id": "f46",
+      "name": "Pan blanco (barra)",
+      "category": "grains",
+      "kcalPer100": 261,
+      "proteinPer100": 8.5,
+      "carbsPer100": 52,
+      "fatPer100": 1.6
+    },
+    {
+      "id": "f47",
+      "name": "Pan integral",
+      "category": "grains",
+      "kcalPer100": 247,
+      "proteinPer100": 13,
+      "carbsPer100": 41,
+      "fatPer100": 3.4
+    },
+    {
+      "id": "f48",
+      "name": "Pan de molde",
+      "category": "grains",
+      "kcalPer100": 265,
       "proteinPer100": 9,
+      "carbsPer100": 49,
+      "fatPer100": 3.3
+    },
+    {
+      "id": "f49",
+      "name": "Tortilla de trigo (wrap)",
+      "category": "grains",
+      "kcalPer100": 310,
+      "proteinPer100": 8.3,
+      "carbsPer100": 50,
+      "fatPer100": 8
+    },
+    {
+      "id": "f50",
+      "name": "Tortitas de arroz",
+      "category": "grains",
+      "kcalPer100": 387,
+      "proteinPer100": 8,
+      "carbsPer100": 81.5,
+      "fatPer100": 2.8
+    },
+    {
+      "id": "f51",
+      "name": "Quinoa cocida",
+      "category": "grains",
+      "kcalPer100": 120,
+      "proteinPer100": 4.4,
+      "carbsPer100": 21.3,
+      "fatPer100": 1.9
+    },
+    {
+      "id": "f52",
+      "name": "Cuscús cocido",
+      "category": "grains",
+      "kcalPer100": 112,
+      "proteinPer100": 3.8,
+      "carbsPer100": 23.2,
+      "fatPer100": 0.2
+    },
+    {
+      "id": "f53",
+      "name": "Copos de maíz",
+      "category": "grains",
+      "kcalPer100": 357,
+      "proteinPer100": 7.5,
+      "carbsPer100": 84,
+      "fatPer100": 0.4
+    },
+    {
+      "id": "f54",
+      "name": "Harina de trigo",
+      "category": "grains",
+      "kcalPer100": 364,
+      "proteinPer100": 10.3,
+      "carbsPer100": 76,
+      "fatPer100": 1
+    },
+    {
+      "id": "f55",
+      "name": "Patata cocida",
+      "category": "grains",
+      "kcalPer100": 87,
+      "proteinPer100": 1.9,
+      "carbsPer100": 20,
+      "fatPer100": 0.1
+    },
+    {
+      "id": "f56",
+      "name": "Boniato asado",
+      "category": "grains",
+      "kcalPer100": 90,
+      "proteinPer100": 2,
+      "carbsPer100": 20.7,
+      "fatPer100": 0.2
+    },
+    {
+      "id": "f57",
+      "name": "Lentejas cocidas",
+      "category": "legumes",
+      "kcalPer100": 116,
+      "proteinPer100": 9,
+      "carbsPer100": 20,
+      "fatPer100": 0.4
+    },
+    {
+      "id": "f58",
+      "name": "Garbanzos cocidos",
+      "category": "legumes",
+      "kcalPer100": 164,
+      "proteinPer100": 8.9,
+      "carbsPer100": 27.4,
+      "fatPer100": 2.6
+    },
+    {
+      "id": "f59",
+      "name": "Alubias cocidas",
+      "category": "legumes",
+      "kcalPer100": 140,
+      "proteinPer100": 8.2,
+      "carbsPer100": 26,
+      "fatPer100": 0.6
+    },
+    {
+      "id": "f60",
+      "name": "Guisantes",
+      "category": "legumes",
+      "kcalPer100": 81,
+      "proteinPer100": 5.4,
+      "carbsPer100": 14.5,
+      "fatPer100": 0.4
+    },
+    {
+      "id": "f61",
+      "name": "Edamame",
+      "category": "legumes",
+      "kcalPer100": 121,
+      "proteinPer100": 11.9,
+      "carbsPer100": 8.9,
+      "fatPer100": 5.2
+    },
+    {
+      "id": "f62",
+      "name": "Tofu firme",
+      "category": "legumes",
+      "kcalPer100": 144,
+      "proteinPer100": 17.3,
+      "carbsPer100": 2.8,
+      "fatPer100": 8.7
+    },
+    {
+      "id": "f63",
+      "name": "Soja texturizada",
+      "category": "legumes",
+      "kcalPer100": 330,
+      "proteinPer100": 50,
+      "carbsPer100": 30,
+      "fatPer100": 1
+    },
+    {
+      "id": "f64",
+      "name": "Hummus",
+      "category": "legumes",
+      "kcalPer100": 166,
+      "proteinPer100": 7.9,
+      "carbsPer100": 14.3,
+      "fatPer100": 9.6
+    },
+    {
+      "id": "f65",
+      "name": "Brócoli",
+      "category": "vegetables",
+      "kcalPer100": 34,
+      "proteinPer100": 2.8,
+      "carbsPer100": 6.6,
+      "fatPer100": 0.4
+    },
+    {
+      "id": "f66",
+      "name": "Espinacas",
+      "category": "vegetables",
+      "kcalPer100": 23,
+      "proteinPer100": 2.9,
       "carbsPer100": 3.6,
-      "fatPer100": 5
+      "fatPer100": 0.4
+    },
+    {
+      "id": "f67",
+      "name": "Tomate",
+      "category": "vegetables",
+      "kcalPer100": 18,
+      "proteinPer100": 0.9,
+      "carbsPer100": 3.9,
+      "fatPer100": 0.2
+    },
+    {
+      "id": "f68",
+      "name": "Lechuga",
+      "category": "vegetables",
+      "kcalPer100": 15,
+      "proteinPer100": 1.4,
+      "carbsPer100": 2.9,
+      "fatPer100": 0.2
+    },
+    {
+      "id": "f69",
+      "name": "Zanahoria",
+      "category": "vegetables",
+      "kcalPer100": 41,
+      "proteinPer100": 0.9,
+      "carbsPer100": 9.6,
+      "fatPer100": 0.2
+    },
+    {
+      "id": "f70",
+      "name": "Pepino",
+      "category": "vegetables",
+      "kcalPer100": 15,
+      "proteinPer100": 0.7,
+      "carbsPer100": 3.6,
+      "fatPer100": 0.1
+    },
+    {
+      "id": "f71",
+      "name": "Pimiento rojo",
+      "category": "vegetables",
+      "kcalPer100": 31,
+      "proteinPer100": 1,
+      "carbsPer100": 6,
+      "fatPer100": 0.3
+    },
+    {
+      "id": "f72",
+      "name": "Cebolla",
+      "category": "vegetables",
+      "kcalPer100": 40,
+      "proteinPer100": 1.1,
+      "carbsPer100": 9.3,
+      "fatPer100": 0.1
+    },
+    {
+      "id": "f73",
+      "name": "Calabacín",
+      "category": "vegetables",
+      "kcalPer100": 17,
+      "proteinPer100": 1.2,
+      "carbsPer100": 3.1,
+      "fatPer100": 0.3
+    },
+    {
+      "id": "f74",
+      "name": "Champiñones",
+      "category": "vegetables",
+      "kcalPer100": 22,
+      "proteinPer100": 3.1,
+      "carbsPer100": 3.3,
+      "fatPer100": 0.3
+    },
+    {
+      "id": "f75",
+      "name": "Judías verdes",
+      "category": "vegetables",
+      "kcalPer100": 31,
+      "proteinPer100": 1.8,
+      "carbsPer100": 7,
+      "fatPer100": 0.2
+    },
+    {
+      "id": "f76",
+      "name": "Espárragos",
+      "category": "vegetables",
+      "kcalPer100": 20,
+      "proteinPer100": 2.2,
+      "carbsPer100": 3.9,
+      "fatPer100": 0.1
+    },
+    {
+      "id": "f77",
+      "name": "Coliflor",
+      "category": "vegetables",
+      "kcalPer100": 25,
+      "proteinPer100": 1.9,
+      "carbsPer100": 5,
+      "fatPer100": 0.3
+    },
+    {
+      "id": "f78",
+      "name": "Berenjena",
+      "category": "vegetables",
+      "kcalPer100": 25,
+      "proteinPer100": 1,
+      "carbsPer100": 5.9,
+      "fatPer100": 0.2
+    },
+    {
+      "id": "f4",
+      "name": "Plátano",
+      "category": "fruits",
+      "kcalPer100": 89,
+      "proteinPer100": 1.1,
+      "carbsPer100": 23,
+      "fatPer100": 0.3
+    },
+    {
+      "id": "f79",
+      "name": "Manzana",
+      "category": "fruits",
+      "kcalPer100": 52,
+      "proteinPer100": 0.3,
+      "carbsPer100": 13.8,
+      "fatPer100": 0.2
+    },
+    {
+      "id": "f80",
+      "name": "Naranja",
+      "category": "fruits",
+      "kcalPer100": 47,
+      "proteinPer100": 0.9,
+      "carbsPer100": 11.8,
+      "fatPer100": 0.1
+    },
+    {
+      "id": "f81",
+      "name": "Fresas",
+      "category": "fruits",
+      "kcalPer100": 32,
+      "proteinPer100": 0.7,
+      "carbsPer100": 7.7,
+      "fatPer100": 0.3
+    },
+    {
+      "id": "f82",
+      "name": "Kiwi",
+      "category": "fruits",
+      "kcalPer100": 61,
+      "proteinPer100": 1.1,
+      "carbsPer100": 14.7,
+      "fatPer100": 0.5
+    },
+    {
+      "id": "f83",
+      "name": "Pera",
+      "category": "fruits",
+      "kcalPer100": 57,
+      "proteinPer100": 0.4,
+      "carbsPer100": 15.2,
+      "fatPer100": 0.1
+    },
+    {
+      "id": "f84",
+      "name": "Uvas",
+      "category": "fruits",
+      "kcalPer100": 69,
+      "proteinPer100": 0.7,
+      "carbsPer100": 18.1,
+      "fatPer100": 0.2
+    },
+    {
+      "id": "f85",
+      "name": "Piña",
+      "category": "fruits",
+      "kcalPer100": 50,
+      "proteinPer100": 0.5,
+      "carbsPer100": 13.1,
+      "fatPer100": 0.1
+    },
+    {
+      "id": "f86",
+      "name": "Sandía",
+      "category": "fruits",
+      "kcalPer100": 30,
+      "proteinPer100": 0.6,
+      "carbsPer100": 7.6,
+      "fatPer100": 0.2
+    },
+    {
+      "id": "f87",
+      "name": "Melón",
+      "category": "fruits",
+      "kcalPer100": 34,
+      "proteinPer100": 0.8,
+      "carbsPer100": 8.2,
+      "fatPer100": 0.2
+    },
+    {
+      "id": "f88",
+      "name": "Arándanos",
+      "category": "fruits",
+      "kcalPer100": 57,
+      "proteinPer100": 0.7,
+      "carbsPer100": 14.5,
+      "fatPer100": 0.3
+    },
+    {
+      "id": "f89",
+      "name": "Mango",
+      "category": "fruits",
+      "kcalPer100": 60,
+      "proteinPer100": 0.8,
+      "carbsPer100": 15,
+      "fatPer100": 0.4
+    },
+    {
+      "id": "f90",
+      "name": "Melocotón",
+      "category": "fruits",
+      "kcalPer100": 39,
+      "proteinPer100": 0.9,
+      "carbsPer100": 9.5,
+      "fatPer100": 0.3
+    },
+    {
+      "id": "f91",
+      "name": "Aguacate",
+      "category": "fruits",
+      "kcalPer100": 160,
+      "proteinPer100": 2,
+      "carbsPer100": 8.5,
+      "fatPer100": 14.7
+    },
+    {
+      "id": "f92",
+      "name": "Dátiles",
+      "category": "fruits",
+      "kcalPer100": 277,
+      "proteinPer100": 1.8,
+      "carbsPer100": 75,
+      "fatPer100": 0.2
+    },
+    {
+      "id": "f93",
+      "name": "Pasas",
+      "category": "fruits",
+      "kcalPer100": 299,
+      "proteinPer100": 3.1,
+      "carbsPer100": 79.2,
+      "fatPer100": 0.5
+    },
+    {
+      "id": "f94",
+      "name": "Almendras",
+      "category": "nuts",
+      "kcalPer100": 579,
+      "proteinPer100": 21.2,
+      "carbsPer100": 21.6,
+      "fatPer100": 49.9
+    },
+    {
+      "id": "f95",
+      "name": "Nueces",
+      "category": "nuts",
+      "kcalPer100": 654,
+      "proteinPer100": 15.2,
+      "carbsPer100": 13.7,
+      "fatPer100": 65.2
+    },
+    {
+      "id": "f96",
+      "name": "Cacahuetes",
+      "category": "nuts",
+      "kcalPer100": 567,
+      "proteinPer100": 25.8,
+      "carbsPer100": 16.1,
+      "fatPer100": 49.2
+    },
+    {
+      "id": "f97",
+      "name": "Crema de cacahuete",
+      "category": "nuts",
+      "kcalPer100": 588,
+      "proteinPer100": 25.1,
+      "carbsPer100": 20,
+      "fatPer100": 50.4
+    },
+    {
+      "id": "f98",
+      "name": "Anacardos",
+      "category": "nuts",
+      "kcalPer100": 553,
+      "proteinPer100": 18.2,
+      "carbsPer100": 30.2,
+      "fatPer100": 43.9
+    },
+    {
+      "id": "f99",
+      "name": "Pistachos",
+      "category": "nuts",
+      "kcalPer100": 560,
+      "proteinPer100": 20.2,
+      "carbsPer100": 27.2,
+      "fatPer100": 45.3
+    },
+    {
+      "id": "f100",
+      "name": "Avellanas",
+      "category": "nuts",
+      "kcalPer100": 628,
+      "proteinPer100": 15,
+      "carbsPer100": 16.7,
+      "fatPer100": 60.8
+    },
+    {
+      "id": "f101",
+      "name": "Semillas de chía",
+      "category": "nuts",
+      "kcalPer100": 486,
+      "proteinPer100": 16.5,
+      "carbsPer100": 42.1,
+      "fatPer100": 30.7
+    },
+    {
+      "id": "f102",
+      "name": "Pipas de girasol peladas",
+      "category": "nuts",
+      "kcalPer100": 584,
+      "proteinPer100": 20.8,
+      "carbsPer100": 20,
+      "fatPer100": 51.5
+    },
+    {
+      "id": "f103",
+      "name": "Aceite de oliva virgen extra",
+      "category": "fats",
+      "kcalPer100": 884,
+      "proteinPer100": 0,
+      "carbsPer100": 0,
+      "fatPer100": 100
+    },
+    {
+      "id": "f104",
+      "name": "Aceite de girasol",
+      "category": "fats",
+      "kcalPer100": 884,
+      "proteinPer100": 0,
+      "carbsPer100": 0,
+      "fatPer100": 100
+    },
+    {
+      "id": "f105",
+      "name": "Mantequilla",
+      "category": "fats",
+      "kcalPer100": 717,
+      "proteinPer100": 0.9,
+      "carbsPer100": 0.1,
+      "fatPer100": 81.1
+    },
+    {
+      "id": "f106",
+      "name": "Aceitunas verdes",
+      "category": "fats",
+      "kcalPer100": 145,
+      "proteinPer100": 1,
+      "carbsPer100": 3.8,
+      "fatPer100": 15.3
+    },
+    {
+      "id": "f107",
+      "name": "Mayonesa",
+      "category": "fats",
+      "kcalPer100": 680,
+      "proteinPer100": 1,
+      "carbsPer100": 0.6,
+      "fatPer100": 75
+    },
+    {
+      "id": "f108",
+      "name": "Zumo de naranja",
+      "category": "drinks",
+      "kcalPer100": 45,
+      "proteinPer100": 0.7,
+      "carbsPer100": 10.4,
+      "fatPer100": 0.2
+    },
+    {
+      "id": "f109",
+      "name": "Bebida de soja sin azúcar",
+      "category": "drinks",
+      "kcalPer100": 33,
+      "proteinPer100": 3.3,
+      "carbsPer100": 0.6,
+      "fatPer100": 1.8
+    },
+    {
+      "id": "f110",
+      "name": "Refresco de cola",
+      "category": "drinks",
+      "kcalPer100": 42,
+      "proteinPer100": 0,
+      "carbsPer100": 10.6,
+      "fatPer100": 0
+    },
+    {
+      "id": "f111",
+      "name": "Bebida isotónica",
+      "category": "drinks",
+      "kcalPer100": 26,
+      "proteinPer100": 0,
+      "carbsPer100": 6.4,
+      "fatPer100": 0
+    },
+    {
+      "id": "f112",
+      "name": "Chocolate negro 70 %",
+      "category": "sweets",
+      "kcalPer100": 598,
+      "proteinPer100": 7.8,
+      "carbsPer100": 45.9,
+      "fatPer100": 42.6
+    },
+    {
+      "id": "f113",
+      "name": "Miel",
+      "category": "sweets",
+      "kcalPer100": 304,
+      "proteinPer100": 0.3,
+      "carbsPer100": 82.4,
+      "fatPer100": 0
+    },
+    {
+      "id": "f114",
+      "name": "Mermelada",
+      "category": "sweets",
+      "kcalPer100": 250,
+      "proteinPer100": 0.4,
+      "carbsPer100": 60,
+      "fatPer100": 0.1
+    },
+    {
+      "id": "f115",
+      "name": "Azúcar",
+      "category": "sweets",
+      "kcalPer100": 387,
+      "proteinPer100": 0,
+      "carbsPer100": 100,
+      "fatPer100": 0
+    },
+    {
+      "id": "f116",
+      "name": "Galletas María",
+      "category": "sweets",
+      "kcalPer100": 436,
+      "proteinPer100": 7,
+      "carbsPer100": 75,
+      "fatPer100": 12
+    },
+    {
+      "id": "f117",
+      "name": "Patatas fritas de bolsa",
+      "category": "sweets",
+      "kcalPer100": 536,
+      "proteinPer100": 7,
+      "carbsPer100": 53,
+      "fatPer100": 34
+    },
+    {
+      "id": "f118",
+      "name": "Proteína whey en polvo",
+      "category": "supplements",
+      "kcalPer100": 400,
+      "proteinPer100": 78,
+      "carbsPer100": 8,
+      "fatPer100": 6
+    },
+    {
+      "id": "f119",
+      "name": "Caseína en polvo",
+      "category": "supplements",
+      "kcalPer100": 360,
+      "proteinPer100": 80,
+      "carbsPer100": 5,
+      "fatPer100": 1.5
+    },
+    {
+      "id": "f120",
+      "name": "Barrita de proteínas",
+      "category": "supplements",
+      "kcalPer100": 350,
+      "proteinPer100": 30,
+      "carbsPer100": 35,
+      "fatPer100": 11
     }
   ],
   "routineTemplates": [

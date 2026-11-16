@@ -390,6 +390,41 @@ class _CatalogTab extends StatelessWidget {
     messenger.showSnackBar(SnackBar(content: Text(error ?? done)));
   }
 
+  /// Sube los alimentos del archivo, tras confirmar cuántos son.
+  Future<void> _updateFoods(BuildContext context) async {
+    final store = SessionScope.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final seed = await CatalogSeed.load();
+    final count = seed.foods.length;
+    if (!context.mounted) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('¿Actualizar alimentos?'),
+        content: Text(
+          'Se subirán $count alimentos. Los que ya existen con el mismo id '
+          'se sobrescriben; los que has creado a mano, los ejercicios y las '
+          'plantillas no se tocan.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Actualizar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final error = await store.updateFoodsFromSeed(seed);
+    messenger.showSnackBar(
+      SnackBar(content: Text(error ?? '$count alimentos actualizados.')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = SessionScope.of(context);
@@ -461,6 +496,11 @@ class _CatalogTab extends StatelessWidget {
           onPressed: () => _updateExercises(context),
           icon: const Icon(Icons.sync),
           label: const Text('Actualizar ejercicios desde el archivo'),
+        ),
+        TextButton.icon(
+          onPressed: () => _updateFoods(context),
+          icon: const Icon(Icons.sync),
+          label: const Text('Actualizar alimentos desde el archivo'),
         ),
         if (!store.catalogEmpty) ...[
           TextButton.icon(

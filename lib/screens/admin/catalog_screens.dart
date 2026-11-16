@@ -148,7 +148,7 @@ class FoodsAdminScreen extends StatelessWidget {
       items: store.foods,
       name: (f) => f.name,
       subtitle: (f) =>
-          '${_n(f.kcalPer100)} kcal · P ${_n(f.proteinPer100)} g · '
+          '${f.category.label} · ${_n(f.kcalPer100)} kcal · P ${_n(f.proteinPer100)} g · '
           'H ${_n(f.carbsPer100)} g · G ${_n(f.fatPer100)} g (por 100 g)',
       onAdd: () => _edit(context),
       onEdit: (f) => _edit(context, f),
@@ -176,6 +176,7 @@ class _FoodDialogState extends State<_FoodDialog> {
   );
   late final _carbs = TextEditingController(text: _n(widget.food?.carbsPer100));
   late final _fat = TextEditingController(text: _n(widget.food?.fatPer100));
+  late FoodCategory _category = widget.food?.category ?? FoodCategory.other;
 
   @override
   void dispose() {
@@ -196,6 +197,7 @@ class _FoodDialogState extends State<_FoodDialog> {
         proteinPer100: _parse(_protein.text)!,
         carbsPer100: _parse(_carbs.text)!,
         fatPer100: _parse(_fat.text)!,
+        category: _category,
       ),
     );
   }
@@ -227,6 +229,17 @@ class _FoodDialogState extends State<_FoodDialog> {
                   decoration: const InputDecoration(labelText: 'Nombre'),
                   validator: (v) =>
                       (v ?? '').trim().isEmpty ? 'Pon un nombre' : null,
+                ),
+                DropdownButtonFormField<FoodCategory>(
+                  initialValue: _category,
+                  decoration: const InputDecoration(labelText: 'Categoría'),
+                  items: [
+                    for (final c in FoodCategory.values)
+                      DropdownMenuItem(value: c, child: Text(c.label)),
+                  ],
+                  onChanged: (c) {
+                    if (c != null) setState(() => _category = c);
+                  },
                 ),
                 const SizedBox(height: 8),
                 const Align(

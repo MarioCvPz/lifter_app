@@ -16,11 +16,11 @@ void main() {
     final seed = CatalogSeed.fromJson(jsonDecode(json) as Map<String, dynamic>);
 
     expect(seed.exercises, hasLength(85));
-    expect(seed.foods, hasLength(6));
+    expect(seed.foods, hasLength(120));
     expect(seed.templates, hasLength(3));
     // Ids únicos.
     expect({for (final e in seed.exercises) e.id}, hasLength(85));
-    expect({for (final f in seed.foods) f.id}, hasLength(6));
+    expect({for (final f in seed.foods) f.id}, hasLength(120));
     for (final t in seed.templates) {
       expect(t.isTemplate, isTrue);
       expect(t.recommendedDays, isNotNull);
@@ -28,6 +28,65 @@ void main() {
       // Todos los ejercicios de las plantillas existen en el catálogo.
       expect(seed.exercises, containsAll(t.exercises));
     }
+  });
+
+  test('Los alimentos del catálogo inicial son realistas', () {
+    final json = File('assets/seed/catalog.json').readAsStringSync();
+    final seed = CatalogSeed.fromJson(jsonDecode(json) as Map<String, dynamic>);
+
+    for (final f in seed.foods) {
+      // Todos tienen una categoría del archivo (ninguno cae en "Otros").
+      expect(f.category, isNot(FoodCategory.other), reason: f.name);
+      // En 100 g no puede haber más de 100 g de macronutrientes.
+      expect(
+        f.proteinPer100 + f.carbsPer100 + f.fatPer100,
+        lessThanOrEqualTo(100),
+        reason: f.name,
+      );
+      // Las calorías cuadran con los macros (4 kcal/g proteína e hidratos,
+      // 9 kcal/g grasa). Se deja margen por la fibra y el redondeo.
+      final fromMacros =
+          4 * f.proteinPer100 + 4 * f.carbsPer100 + 9 * f.fatPer100;
+      final margin = f.kcalPer100 * 0.15 > 10 ? f.kcalPer100 * 0.15 : 10;
+      expect(
+        (f.kcalPer100 - fromMacros).abs(),
+        lessThanOrEqualTo(margin),
+        reason: f.name,
+      );
+    }
+  });
+
+  test('Food: la categoría se guarda y los alimentos antiguos son "Otros"', () {
+    const tuna = Food(
+      id: 'f15',
+      name: 'Atún al natural (lata)',
+      kcalPer100: 111,
+      proteinPer100: 25.5,
+      carbsPer100: 0,
+      fatPer100: 1,
+      category: FoodCategory.fish,
+    );
+    expect(Food.fromMap(tuna.toMap()).category, FoodCategory.fish);
+
+    // Documento antiguo de Firestore, sin el campo `category`.
+    final old = Food.fromMap({
+      'id': 'f1',
+      'name': 'Pechuga de pollo',
+      'kcalPer100': 110,
+      'proteinPer100': 23,
+      'carbsPer100': 0,
+      'fatPer100': 1.5,
+    });
+    expect(old.category, FoodCategory.other);
+    expect(FoodCategory.fromName('inventada'), FoodCategory.other);
+  });
+
+  test('Solo un admin puede subir los alimentos del archivo', () async {
+    final store = AppStore()..user = profile(role: UserRole.trainer);
+    expect(
+      await store.updateFoodsFromSeed(),
+      'Solo un admin puede actualizar los alimentos.',
+    );
   });
 
   test('CP-08 Solo un admin puede modificar el catálogo', () async {

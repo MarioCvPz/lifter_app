@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/models.dart';
 import 'auth_service.dart';
@@ -61,6 +62,14 @@ class AppStore extends ChangeNotifier {
 
   /// Agua bebida hoy, en ml (users/{uid}/water/{aaaa-mm-dd}).
   int waterMl = 0;
+
+  /// Tema elegido (oscuro por defecto). Se guarda en el propio dispositivo
+  /// con shared_preferences y no en Firestore, porque es una preferencia
+  /// del dispositivo y así también se aplica en la pantalla de login.
+  ThemeMode themeMode = ThemeMode.dark;
+
+  /// Clave con la que se guarda el tema en shared_preferences.
+  static const themeKey = 'themeMode';
 
   String? get currentUid => _auth.currentUser?.uid;
 
@@ -510,6 +519,31 @@ class AppStore extends ChangeNotifier {
     );
   }
 
+  // --- Tema (claro u oscuro) ---
+
+  /// Lee el tema guardado en el dispositivo. Se llama al arrancar la app.
+  /// Si no hay nada guardado (o no se puede leer), se queda el oscuro.
+  Future<void> loadThemeMode() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString(themeKey);
+      themeMode = saved == ThemeMode.light.name
+          ? ThemeMode.light
+          : ThemeMode.dark;
+      notifyListeners();
+    } on Exception {
+      // Sin acceso al almacenamiento local: se mantiene el tema oscuro.
+    }
+  }
+
+  /// Cambia el tema al momento y lo guarda para la próxima vez.
+  Future<void> setThemeMode(ThemeMode mode) async {
+    themeMode = mode;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(themeKey, mode.name);
+  }
+
   // --- Catálogo (solo admins; lo comprueban las reglas) ---
 
   /// True si todavía no hay nada en el catálogo de Firestore.
@@ -588,6 +622,26 @@ class AppStore extends ChangeNotifier {
       return null;
     } on FirebaseException catch (e) {
       return 'No se pudieron actualizar los ejercicios: ${e.message ?? e.code}';
+    }
+  }
+
+  /// Sube a Firestore los alimentos de assets/seed/catalog.json: crea los
+  /// nuevos y sobrescribe los que tienen el mismo id. Los alimentos que el
+  /// admin haya creado a mano (con otro id) no se tocan, ni tampoco los
+  /// ejercicios ni las plantillas. Devuelve el mensaje de error, o null.
+  Future<String?> updateFoodsFromSeed([CatalogSeed? seed]) async {
+    if (!isAdmin) return 'Solo un admin puede actualizar los alimentos.';
+    try {
+      final data = seed ?? await CatalogSeed.load();
+      // Un WriteBatch admite 500 operaciones; el archivo tiene 120 alimentos.
+      final batch = _db.batch();
+      for (final f in data.foods) {
+        batch.set(_catalog(CatalogCollections.foods).doc(f.id), f.toMap());
+      }
+      await batch.commit();
+      return null;
+    } on FirebaseException catch (e) {
+      return 'No se pudieron actualizar los alimentos: ${e.message ?? e.code}';
     }
   }
 

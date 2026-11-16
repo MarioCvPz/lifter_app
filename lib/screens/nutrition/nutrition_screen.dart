@@ -5,7 +5,13 @@ import '../../data/stats.dart';
 import '../../models/models.dart';
 import '../../widgets/brand.dart';
 import '../../widgets/help.dart';
+import 'food_catalog_screen.dart';
+import 'food_category_icon.dart';
+import 'macro_summary_card.dart';
 
+/// Pantalla de Nutrición: día elegido, resumen de calorías y macros, y lo
+/// que se ha comido ese día. Los alimentos se añaden desde el catálogo
+/// ([FoodCatalogScreen]), que se abre con el botón "Añadir alimento".
 class NutritionScreen extends StatefulWidget {
   const NutritionScreen({super.key});
 
@@ -14,14 +20,7 @@ class NutritionScreen extends StatefulWidget {
 }
 
 class _NutritionScreenState extends State<NutritionScreen> {
-  final _query = TextEditingController();
   DateTime _day = DateTime.now();
-
-  @override
-  void dispose() {
-    _query.dispose();
-    super.dispose();
-  }
 
   bool get _isToday => DateUtils.isSameDay(_day, DateTime.now());
 
@@ -39,227 +38,173 @@ class _NutritionScreenState extends State<NutritionScreen> {
         '${_day.month.toString().padLeft(2, '0')}/${_day.year}';
   }
 
+  void _openCatalog() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => FoodCatalogScreen(day: _day, dayLabel: _dayLabel()),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = SessionScope.of(context);
-    final macros = store.macrosFor(_day);
-    final targets = store.macroTargets();
     final logs = store.nutritionFor(_day);
-    final q = _query.text.trim().toLowerCase();
-    final foods = store.foods
-        .where((f) => q.isEmpty || f.name.toLowerCase().contains(q))
-        .toList();
 
     return Scaffold(
       appBar: const BrandAppBar(title: 'Nutrición', help: HelpTopic.nutrition),
+      floatingActionButton: FloatingActionButton.extended(
+        // Sin animación Hero: las pestañas viven a la vez en un IndexedStack
+        // y Entrenos ya tiene otro botón flotante con la etiqueta por defecto.
+        // Dos Hero con la misma etiqueta dan error al abrir otra pantalla.
+        heroTag: null,
+        onPressed: _openCatalog,
+        icon: const Icon(Icons.add),
+        label: const Text('Añadir alimento'),
+      ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        // Abajo deja sitio para que el botón no tape el último registro.
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
         children: [
-          Row(
-            children: [
-              IconButton(
-                tooltip: 'Día anterior',
-                onPressed: () => _moveDay(-1),
-                icon: const Icon(Icons.chevron_left),
-              ),
-              Expanded(
-                child: Text(
-                  _dayLabel(),
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ),
-              IconButton(
-                tooltip: 'Día siguiente',
-                onPressed: _isToday ? null : () => _moveDay(1),
-                icon: const Icon(Icons.chevron_right),
-              ),
-            ],
+          _DaySelector(
+            label: _dayLabel(),
+            onPrevious: () => _moveDay(-1),
+            onNext: _isToday ? null : () => _moveDay(1),
           ),
           const SizedBox(height: 8),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _macroRow('Calorías', macros.kcal, targets.kcal, 'kcal'),
-                  _macroRow('Proteínas', macros.protein, targets.protein, 'g'),
-                  _macroRow('Hidratos', macros.carbs, targets.carbs, 'g'),
-                  _macroRow('Grasas', macros.fat, targets.fat, 'g'),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Objetivo orientativo según tus datos, tu actividad '
-                    'y tu objetivo del perfil.',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
+          MacroSummaryCard(
+            macros: store.macrosFor(_day),
+            targets: store.macroTargets(),
           ),
-          const SizedBox(height: 16),
-          Text(
-            _isToday ? 'Registros de hoy' : 'Registros del día',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          const SizedBox(height: 20),
+          _LogsHeader(isToday: _isToday, count: logs.length),
           const SizedBox(height: 8),
-          if (logs.isEmpty)
-            const Text('No hay alimentos registrados este día.'),
+          if (logs.isEmpty) const _NoLogs(),
           for (final e in logs)
-            Card(
-              child: ListTile(
-                title: Text(e.food.name),
-                subtitle: Text(
-                  '${e.grams.toStringAsFixed(0)} g · ${e.kcal.toStringAsFixed(0)} kcal',
-                ),
-                trailing: IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => store.removeNutrition(e.id),
-                ),
-              ),
-            ),
-          const SizedBox(height: 16),
-          Text(
-            'Catálogo de alimentos',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _query,
-            onChanged: (_) => setState(() {}),
-            decoration: const InputDecoration(
-              hintText: 'Buscar alimento',
-              prefixIcon: Icon(Icons.search),
-            ),
-          ),
-          const SizedBox(height: 8),
-          if (store.foods.isEmpty)
-            const Text(
-              'El catálogo de alimentos está vacío. Un admin tiene que '
-              'cargarlo desde Administración.',
-            )
-          else if (foods.isEmpty)
-            const Text('Ningún alimento coincide con la búsqueda.'),
-          for (final food in foods)
-            Card(
-              child: ListTile(
-                title: Text(food.name),
-                subtitle: Text(
-                  '${food.kcalPer100.toStringAsFixed(0)} kcal / 100 g',
-                ),
-                trailing: const Icon(Icons.add),
-                onTap: () => _addFood(store, food),
-              ),
-            ),
+            _EntryTile(entry: e, onRemove: () => store.removeNutrition(e.id)),
         ],
-      ),
-    );
-  }
-
-  Widget _macroRow(String label, double value, double target, String unit) {
-    final progress = target <= 0 ? 0.0 : (value / target).clamp(0.0, 1.0);
-    final over = value > target * 1.05;
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(child: Text(label)),
-              Text(
-                '${value.toStringAsFixed(0)} / ${target.toStringAsFixed(0)} $unit',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: over ? scheme.error : null,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          LinearProgressIndicator(
-            value: progress,
-            minHeight: 6,
-            borderRadius: BorderRadius.circular(3),
-            color: over ? scheme.error : null,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _addFood(AppStore store, Food food) async {
-    final g = await showDialog<double>(
-      context: context,
-      builder: (_) => _GramsDialog(food: food),
-    );
-    if (g == null || g <= 0) return;
-
-    // Se apunta en el día que se está viendo, con la hora actual.
-    final now = DateTime.now();
-    store.addNutrition(
-      NutritionEntry(
-        id: now.millisecondsSinceEpoch.toString(),
-        food: food,
-        grams: g,
-        date: DateTime(
-          _day.year,
-          _day.month,
-          _day.day,
-          now.hour,
-          now.minute,
-          now.second,
-        ),
       ),
     );
   }
 }
 
-/// Pide los gramos de un alimento. Devuelve null si se cancela.
-///
-/// El controlador vive en el State del diálogo para liberarlo cuando el
-/// diálogo ya se ha cerrado del todo (no al acabar showDialog, que vuelve
-/// antes de que termine la animación de cierre).
-class _GramsDialog extends StatefulWidget {
-  const _GramsDialog({required this.food});
+/// Flechas para cambiar de día y el día en el centro.
+class _DaySelector extends StatelessWidget {
+  const _DaySelector({
+    required this.label,
+    required this.onPrevious,
+    required this.onNext,
+  });
 
-  final Food food;
+  final String label;
+  final VoidCallback onPrevious;
 
-  @override
-  State<_GramsDialog> createState() => _GramsDialogState();
-}
-
-class _GramsDialogState extends State<_GramsDialog> {
-  final _grams = TextEditingController(text: '100');
-
-  @override
-  void dispose() {
-    _grams.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    Navigator.pop(context, double.tryParse(_grams.text.replaceAll(',', '.')));
-  }
+  /// Null cuando ya se está viendo hoy (no se puede ir al futuro).
+  final VoidCallback? onNext;
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.food.name),
-      content: TextField(
-        controller: _grams,
-        autofocus: true,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        decoration: const InputDecoration(labelText: 'Cantidad (gramos)'),
-        onSubmitted: (_) => _submit(),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar'),
+    return Row(
+      children: [
+        IconButton(
+          tooltip: 'Día anterior',
+          onPressed: onPrevious,
+          icon: const Icon(Icons.chevron_left),
         ),
-        FilledButton(onPressed: _submit, child: const Text('Añadir')),
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.calendar_today, size: 18),
+              const SizedBox(width: 8),
+              Text(label, style: Theme.of(context).textTheme.titleLarge),
+            ],
+          ),
+        ),
+        IconButton(
+          tooltip: 'Día siguiente',
+          onPressed: onNext,
+          icon: const Icon(Icons.chevron_right),
+        ),
       ],
+    );
+  }
+}
+
+class _LogsHeader extends StatelessWidget {
+  const _LogsHeader({required this.isToday, required this.count});
+
+  final bool isToday;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Row(
+      children: [
+        const Icon(Icons.restaurant_menu, size: 20),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            isToday ? 'Registros de hoy' : 'Registros del día',
+            style: text.titleMedium,
+          ),
+        ),
+        if (count > 0) Text('$count', style: text.labelMedium),
+      ],
+    );
+  }
+}
+
+class _NoLogs extends StatelessWidget {
+  const _NoLogs();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            Icon(Icons.no_food_outlined, size: 40, color: scheme.outline),
+            const SizedBox(height: 8),
+            const Text(
+              'No hay alimentos registrados este día.',
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Un alimento apuntado: icono de su categoría, gramos, calorías y macros.
+class _EntryTile extends StatelessWidget {
+  const _EntryTile({required this.entry, required this.onRemove});
+
+  final NutritionEntry entry;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final e = entry;
+    return Card(
+      child: ListTile(
+        leading: FoodAvatar(e.food.category),
+        title: Text(e.food.name),
+        subtitle: Text(
+          '${e.grams.toStringAsFixed(0)} g · ${e.kcal.toStringAsFixed(0)} kcal'
+          ' · P ${e.protein.toStringAsFixed(0)} · '
+          'H ${e.carbs.toStringAsFixed(0)} · G ${e.fat.toStringAsFixed(0)}',
+        ),
+        trailing: IconButton(
+          tooltip: 'Quitar',
+          icon: const Icon(Icons.delete_outline),
+          onPressed: onRemove,
+        ),
+      ),
     );
   }
 }

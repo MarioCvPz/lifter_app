@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
-/// Tema oscuro de la app: grafito con acentos coral (primario), lima
-/// (secundario) y ámbar (terciario). Fuente Plus Jakarta Sans.
+/// Temas de la app (oscuro y claro) con acentos coral (primario), verde
+/// lima (secundario) y ámbar (terciario). Fuente Plus Jakarta Sans.
+///
+/// Los dos temas comparten los estilos de [_build]; solo cambian los
+/// colores ([darkScheme] y [lightScheme]).
 class AppTheme {
   static const font = 'PlusJakartaSans';
 
@@ -9,11 +12,16 @@ class AppTheme {
   static const coral = Color(0xFFFF6B4A);
   static const coralLight = Color(0xFFFF8C6B);
 
+  /// Rojo de acciones peligrosas (cerrar sesión). Se lee bien sobre fondo
+  /// oscuro y sobre fondo claro.
+  static const danger = Color(0xFFE5484D);
+
   /// Radios: tarjetas normales y tarjetas grandes.
   static const radius = 16.0;
   static const radiusLg = 32.0;
 
-  static const scheme = ColorScheme(
+  /// Colores del tema oscuro: fondo grafito.
+  static const darkScheme = ColorScheme(
     brightness: Brightness.dark,
     primary: Color(0xFFFFB4A3),
     onPrimary: Color(0xFF630F00),
@@ -54,11 +62,64 @@ class AppTheme {
     scrim: Colors.black,
   );
 
-  static ThemeData dark() {
+  /// Colores del tema claro: fondo gris muy claro, tarjetas blancas y
+  /// grises neutros. Los acentos son vivos pero con un contraste mínimo de
+  /// 3:1 sobre blanco, para que iconos y barras se vean bien.
+  static const lightScheme = ColorScheme(
+    brightness: Brightness.light,
+    primary: Color(0xFFE04E2B),
+    onPrimary: Colors.white,
+    primaryContainer: coral,
+    onPrimaryContainer: Colors.white,
+    // En las pantallas, los colores "Fixed" se usan para textos e iconos
+    // sobre las tarjetas. Los tonos pálidos del tema oscuro no se verían
+    // sobre blanco, así que aquí son los mismos acentos vivos.
+    primaryFixed: Color(0xFFE04E2B),
+    primaryFixedDim: Color(0xFFFFB4A3),
+    secondary: Color(0xFF43A10F),
+    onSecondary: Colors.white,
+    secondaryContainer: Color(0xFFC8F5A8),
+    onSecondaryContainer: Color(0xFF0A2100),
+    secondaryFixed: Color(0xFF43A10F),
+    tertiary: Color(0xFFC28600),
+    onTertiary: Colors.white,
+    tertiaryContainer: Color(0xFFFFE08A),
+    onTertiaryContainer: Color(0xFF3F2E00),
+    error: Color(0xFFD32F2F),
+    onError: Colors.white,
+    errorContainer: Color(0xFFFFDAD6),
+    onErrorContainer: Color(0xFF410002),
+    surface: Color(0xFFF5F5F7),
+    onSurface: Color(0xFF1B1C20),
+    onSurfaceVariant: Color(0xFF5C5F66),
+    surfaceDim: Color(0xFFDADADF),
+    surfaceBright: Colors.white,
+    surfaceContainerLowest: Colors.white,
+    surfaceContainerLow: Color(0xFFFAFAFB),
+    surfaceContainer: Colors.white,
+    surfaceContainerHigh: Color(0xFFECECEF),
+    surfaceContainerHighest: Color(0xFFE3E3E8),
+    outline: Color(0xFF8E9098),
+    outlineVariant: Color(0xFFDADCE0),
+    inverseSurface: Color(0xFF303034),
+    onInverseSurface: Color(0xFFF2F0F4),
+    inversePrimary: Color(0xFFFFB4A3),
+    surfaceTint: Color(0xFFE04E2B),
+    shadow: Colors.black,
+    scrim: Colors.black,
+  );
+
+  static ThemeData dark() => _build(darkScheme);
+
+  static ThemeData light() => _build(lightScheme);
+
+  /// Estilos comunes a los dos temas, con los colores de [scheme].
+  static ThemeData _build(ColorScheme scheme) {
+    final isDark = scheme.brightness == Brightness.dark;
     final base = ThemeData(
       colorScheme: scheme,
       useMaterial3: true,
-      brightness: Brightness.dark,
+      brightness: scheme.brightness,
       fontFamily: font,
     );
     final text = base.textTheme;
@@ -112,7 +173,11 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: scheme.surfaceContainer,
+        // En claro las tarjetas son blancas: los campos van en gris para
+        // que se distingan.
+        fillColor: isDark
+            ? scheme.surfaceContainer
+            : scheme.surfaceContainerHigh,
         hintStyle: TextStyle(color: scheme.outline),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radius),
