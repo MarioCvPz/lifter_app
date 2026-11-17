@@ -49,7 +49,13 @@ class TrainingSettingsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SectionHeader('Ajustes de entrenamiento'),
+        SectionHeader(
+          'Ajustes de entrenamiento',
+          leading: Icon(
+            Icons.tune,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
         Card(
           margin: EdgeInsets.zero,
           child: Column(

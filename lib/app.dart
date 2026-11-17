@@ -17,7 +17,11 @@ class LifterApp extends StatefulWidget {
 }
 
 class _LifterAppState extends State<LifterApp> {
-  late final AppStore _store = widget.store ?? (AppStore()..start());
+  late final AppStore _store =
+      widget.store ??
+      (AppStore()
+        ..start()
+        ..loadThemeMode());
 
   @override
   void dispose() {
@@ -37,7 +41,10 @@ class _LifterAppState extends State<LifterApp> {
           return MaterialApp(
             title: 'LiFTeR+',
             debugShowCheckedModeBanner: false,
-            theme: AppTheme.dark(),
+            // El tema lo elige el usuario en Editar perfil.
+            theme: AppTheme.light(),
+            darkTheme: AppTheme.dark(),
+            themeMode: _store.themeMode,
             locale: const Locale('es'),
             supportedLocales: const [Locale('es'), Locale('en')],
             localizationsDelegates: const [

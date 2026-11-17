@@ -19,6 +19,30 @@ class ProfileScreen extends StatelessWidget {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
   }
 
+  /// Pide confirmación antes de cerrar sesión: el botón está arriba y es
+  /// fácil tocarlo sin querer.
+  Future<void> _confirmLogout(BuildContext context, AppStore store) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.logout, color: AppTheme.danger),
+        title: const Text('¿Cerrar sesión?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Cerrar sesión'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) await store.auth.logout();
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = SessionScope.of(context);
@@ -33,9 +57,26 @@ class ProfileScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
-          // --- Cabecera: foto, nombre y correo ---
-          Center(
-            child: _Avatar(name: user.name, photoUrl: store.photoUrl),
+          // --- Cabecera: editar (izquierda), foto y cerrar sesión (derecha) ---
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              IconButton(
+                tooltip: 'Editar perfil',
+                icon: const Icon(Icons.edit),
+                onPressed: () => _push(context, const EditProfileScreen()),
+              ),
+              Expanded(
+                child: Center(
+                  child: _Avatar(name: user.name, photoUrl: store.photoUrl),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Cerrar sesión',
+                icon: const Icon(Icons.logout, color: AppTheme.danger),
+                onPressed: () => _confirmLogout(context, store),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           Text(
@@ -68,14 +109,8 @@ class ProfileScreen extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 16),
-          Center(
-            child: FilledButton.icon(
-              onPressed: () => _push(context, const EditProfileScreen()),
-              icon: const Icon(Icons.edit, size: 18),
-              label: const Text('Editar perfil'),
-            ),
-          ),
-          const SizedBox(height: 16),
+          _StreakBanner(current: store.streakDays(), best: store.bestStreak()),
+          const SizedBox(height: 12),
           _InfoRow(user: user),
 
           // --- Ajustes de entrenamiento ---
@@ -86,13 +121,12 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: 28),
           SectionHeader(
             'Insignias',
+            leading: Icon(Icons.emoji_events, color: scheme.tertiary),
             trailing: StatusPill(
               label: '$unlocked / ${achievements.length}',
               color: scheme.secondary,
             ),
           ),
-          _StreakBanner(current: store.streakDays(), best: store.bestStreak()),
-          const SizedBox(height: 12),
           GridView.count(
             crossAxisCount: 3,
             shrinkWrap: true,
@@ -105,7 +139,10 @@ class ProfileScreen extends StatelessWidget {
 
           // --- Estadísticas ---
           const SizedBox(height: 28),
-          const SectionHeader('Estadísticas'),
+          SectionHeader(
+            'Estadísticas',
+            leading: Icon(Icons.insights, color: scheme.secondary),
+          ),
           _StatsGrid(store: store),
           const SizedBox(height: 12),
           _WeeklyChart(counts: store.workoutsPerWeek()),
@@ -128,11 +165,6 @@ class ProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
           ],
-          OutlinedButton.icon(
-            onPressed: store.auth.logout,
-            icon: const Icon(Icons.logout),
-            label: const Text('Cerrar sesión'),
-          ),
         ],
       ),
     );
@@ -197,10 +229,10 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [
-      ('${user.heightCm.toStringAsFixed(0)} cm', 'Altura'),
-      ('${_kg(user.weightKg)} kg', 'Peso'),
-      (user.goal.label, 'Objetivo'),
-      ('${user.daysPerWeek} días', 'Por semana'),
+      (Icons.height, '${user.heightCm.toStringAsFixed(0)} cm', 'Altura'),
+      (Icons.monitor_weight_outlined, '${_kg(user.weightKg)} kg', 'Peso'),
+      (Icons.flag_outlined, user.goal.label, 'Objetivo'),
+      (Icons.calendar_month, '${user.daysPerWeek} días', 'Por semana'),
     ];
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
@@ -211,10 +243,12 @@ class _InfoRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
         child: Row(
           children: [
-            for (final (value, label) in items)
+            for (final (icon, value, label) in items)
               Expanded(
                 child: Column(
                   children: [
+                    Icon(icon, size: 20, color: scheme.primary),
+                    const SizedBox(height: 4),
                     FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Text(value, style: text.titleMedium),

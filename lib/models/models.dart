@@ -269,6 +269,35 @@ class Routine {
   };
 }
 
+/// Tipo de alimento. Sirve para filtrar el catálogo de nutrición. En
+/// Firestore se guarda [name] (por ejemplo `"meat"`), como en [UserRole].
+enum FoodCategory {
+  meat('Carnes'),
+  fish('Pescados y mariscos'),
+  eggsDairy('Huevos y lácteos'),
+  grains('Cereales y tubérculos'),
+  legumes('Legumbres'),
+  vegetables('Verduras'),
+  fruits('Frutas'),
+  nuts('Frutos secos y semillas'),
+  fats('Aceites y grasas'),
+  drinks('Bebidas'),
+  sweets('Dulces y snacks'),
+  supplements('Suplementos'),
+  other('Otros');
+
+  const FoodCategory(this.label);
+  final String label;
+
+  /// Los alimentos antiguos no tienen categoría: se tratan como [other].
+  static FoodCategory fromName(String? name) {
+    return FoodCategory.values.firstWhere(
+      (c) => c.name == name,
+      orElse: () => FoodCategory.other,
+    );
+  }
+}
+
 class Food {
   const Food({
     required this.id,
@@ -277,6 +306,7 @@ class Food {
     required this.proteinPer100,
     required this.carbsPer100,
     required this.fatPer100,
+    this.category = FoodCategory.other,
   });
 
   final String id;
@@ -285,6 +315,7 @@ class Food {
   final double proteinPer100;
   final double carbsPer100;
   final double fatPer100;
+  final FoodCategory category;
 
   factory Food.fromMap(Map<String, dynamic> m) => Food(
     id: m['id'] as String,
@@ -293,11 +324,13 @@ class Food {
     proteinPer100: (m['proteinPer100'] as num).toDouble(),
     carbsPer100: (m['carbsPer100'] as num).toDouble(),
     fatPer100: (m['fatPer100'] as num).toDouble(),
+    category: FoodCategory.fromName(m['category'] as String?),
   );
 
   Map<String, dynamic> toMap() => {
     'id': id,
     'name': name,
+    'category': category.name,
     'kcalPer100': kcalPer100,
     'proteinPer100': proteinPer100,
     'carbsPer100': carbsPer100,

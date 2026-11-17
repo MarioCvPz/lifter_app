@@ -98,6 +98,44 @@ Map<String, List<Exercise>> exercisesByMuscle(List<Exercise> exercises) {
   return groups;
 }
 
+/// Quita mayúsculas y tildes para comparar textos: así "platano" encuentra
+/// "Plátano".
+String _plain(String text) {
+  const accents = {'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ü': 'u'};
+  var result = text.trim().toLowerCase();
+  accents.forEach((accent, letter) {
+    result = result.replaceAll(accent, letter);
+  });
+  return result;
+}
+
+/// Alimentos cuyo nombre contiene [query] (sin distinguir mayúsculas ni
+/// tildes) y que son de la categoría [category] (null = todas), ordenados
+/// por nombre.
+List<Food> filterFoods(
+  List<Food> foods, {
+  String query = '',
+  FoodCategory? category,
+}) {
+  final text = _plain(query);
+  return [
+    for (final f in foods)
+      if (_plain(f.name).contains(text) &&
+          (category == null || f.category == category))
+        f,
+  ]..sort((a, b) => _plain(a.name).compareTo(_plain(b.name)));
+}
+
+/// Categorías que tienen al menos un alimento, en el orden de
+/// [FoodCategory]. Así no salen filtros que no darían ningún resultado.
+List<FoodCategory> foodCategoriesIn(List<Food> foods) {
+  final used = {for (final f in foods) f.category};
+  return [
+    for (final c in FoodCategory.values)
+      if (used.contains(c)) c,
+  ];
+}
+
 /// Ejercicios cuyo nombre contiene [query] (sin distinguir mayúsculas) y
 /// que son del grupo [group] (null = todos).
 List<Exercise> filterExercises(

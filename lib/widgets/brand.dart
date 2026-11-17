@@ -159,7 +159,7 @@ class ProgressRing extends StatelessWidget {
         painter: _RingPainter(
           progress: p,
           color: color ?? scheme.secondary,
-          track: Colors.white.withValues(alpha: 0.08),
+          track: scheme.onSurface.withValues(alpha: 0.08),
         ),
         child: Center(
           child: Text(

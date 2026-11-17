@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lifter_app/data/app_store.dart';
+import 'package:lifter_app/data/catalog.dart';
 import 'package:lifter_app/data/stats.dart';
 import 'package:lifter_app/models/models.dart';
 import 'package:lifter_app/screens/home/home_screen.dart';
+import 'package:lifter_app/screens/nutrition/food_catalog_screen.dart';
 import 'package:lifter_app/screens/nutrition/nutrition_screen.dart';
 
 import 'helpers.dart';
@@ -76,7 +78,7 @@ void main() {
 
   testWidgets('Catálogo de alimentos: vacío y búsqueda', (tester) async {
     final store = AppStore();
-    await pumpScreen(tester, store, const NutritionScreen());
+    await pumpScreen(tester, store, _catalogScreen());
     expect(
       find.textContaining('El catálogo de alimentos está vacío'),
       findsOneWidget,
@@ -84,7 +86,7 @@ void main() {
 
     // Con alimentos en el catálogo (como si hubieran llegado de Firestore).
     final withFoods = AppStore()..foods.addAll([chicken, rice]);
-    await pumpScreen(tester, withFoods, const NutritionScreen());
+    await pumpScreen(tester, withFoods, _catalogScreen());
     expect(find.text('Pechuga de pollo'), findsOneWidget);
     expect(find.text('Arroz blanco cocido'), findsOneWidget);
 
@@ -100,4 +102,86 @@ void main() {
       findsOneWidget,
     );
   });
+
+  test('Filtro de alimentos: por nombre sin tildes y por categoría', () {
+    const banana = Food(
+      id: 'f4',
+      name: 'Plátano',
+      kcalPer100: 89,
+      proteinPer100: 1.1,
+      carbsPer100: 23,
+      fatPer100: 0.3,
+      category: FoodCategory.fruits,
+    );
+    const meat = Food(
+      id: 'f1',
+      name: 'Pechuga de pollo',
+      kcalPer100: 110,
+      proteinPer100: 23,
+      carbsPer100: 0,
+      fatPer100: 1.5,
+      category: FoodCategory.meat,
+    );
+    final foods = [meat, banana];
+
+    // Sin filtros: todos, ordenados por nombre.
+    expect(filterFoods(foods), [meat, banana]);
+    // "platano" encuentra "Plátano" aunque no lleve tilde.
+    expect(filterFoods(foods, query: 'PLATANO'), [banana]);
+    expect(filterFoods(foods, category: FoodCategory.meat), [meat]);
+    expect(
+      filterFoods(foods, query: 'pollo', category: FoodCategory.fruits),
+      isEmpty,
+    );
+    // Solo salen filtros de categorías que tienen algún alimento.
+    expect(foodCategoriesIn(foods), [FoodCategory.meat, FoodCategory.fruits]);
+  });
+
+  // Solo se comprueba la hoja de gramos: guardar escribe en Firestore, y
+  // las pruebas no usan Firebase.
+  testWidgets('Al elegir los gramos se ven las calorías y macros', (
+    tester,
+  ) async {
+    final store = AppStore()..foods.addAll([chicken, rice]);
+    await pumpScreen(tester, store, _catalogScreen());
+
+    await tester.tap(find.text('Pechuga de pollo'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('150 g'));
+    await tester.pump();
+    // 150 g de pollo: 165 kcal y 35 g de proteína (34,5 redondeado).
+    expect(find.text('165'), findsOneWidget);
+    expect(find.text('35 g'), findsOneWidget);
+    expect(_addButton(tester).onPressed, isNotNull);
+  });
+
+  testWidgets('Los gramos tienen que ser mayores que 0', (tester) async {
+    final store = AppStore()..foods.add(chicken);
+    await pumpScreen(tester, store, _catalogScreen());
+
+    await tester.tap(find.text('Pechuga de pollo'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, '0');
+    await tester.pump();
+    expect(find.text('Escribe una cantidad mayor que 0'), findsOneWidget);
+
+    // Con una cantidad no válida el botón está desactivado.
+    expect(_addButton(tester).onPressed, isNull);
+  });
+
+  testWidgets('Nutrición sin registros muestra el aviso y el botón', (
+    tester,
+  ) async {
+    await pumpScreen(tester, AppStore(), const NutritionScreen());
+    expect(find.text('No hay alimentos registrados este día.'), findsOneWidget);
+    expect(find.text('Añadir alimento'), findsOneWidget);
+  });
 }
+
+FoodCatalogScreen _catalogScreen() =>
+    FoodCatalogScreen(day: DateTime.now(), dayLabel: 'Hoy');
+
+/// Botón "Añadir" de la hoja de gramos.
+FilledButton _addButton(WidgetTester tester) => tester.widget<FilledButton>(
+  find.ancestor(of: find.text('Añadir'), matching: find.byType(FilledButton)),
+);

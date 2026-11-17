@@ -184,10 +184,15 @@ enum HelpTopic {
     (
       Icons.add,
       'Añadir alimento',
-      'Busca en el catálogo, toca el alimento y escribe los gramos. Las '
-          'calorías y macros se calculan solas.',
+      'Pulsa "Añadir alimento", busca por nombre o filtra por categoría, '
+          'toca el alimento y elige los gramos. Verás sus calorías y macros '
+          'antes de añadirlo.',
     ),
-    (Icons.close, 'Quitar', 'Pulsa la X de un registro para borrarlo.'),
+    (
+      Icons.delete_outline,
+      'Quitar',
+      'Pulsa la papelera de un registro para borrarlo.',
+    ),
     (
       Icons.tune,
       'Tu objetivo',
@@ -204,8 +209,8 @@ enum HelpTopic {
     (
       Icons.edit,
       'Editar perfil',
-      'Pulsa "Editar perfil" para cambiar tus datos, tu material y tus '
-          'días disponibles, y después "Guardar". La foto es la de tu cuenta '
+      'Pulsa el lápiz, a la izquierda de tu foto, para cambiar tus datos, tu '
+          'material y tus días disponibles, y después "Guardar". La foto es la de tu cuenta '
           'de Google; si no entras con Google se muestra tu inicial.',
     ),
     (
@@ -238,7 +243,8 @@ enum HelpTopic {
     (
       Icons.logout,
       'Cerrar sesión',
-      'Al final de la página. Tus datos siguen guardados en tu cuenta.',
+      'Con la puerta roja, a la derecha de tu foto. Tus datos siguen '
+          'guardados en tu cuenta.',
     ),
   ]),
 

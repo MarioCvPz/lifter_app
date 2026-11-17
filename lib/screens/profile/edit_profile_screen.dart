@@ -11,10 +11,12 @@ import '../onboarding/steps/injuries_step.dart';
 import '../onboarding/steps/personal_step.dart';
 import '../onboarding/steps/physical_step.dart';
 import 'save_training_profile.dart';
+import 'training_settings.dart';
 
-/// Formulario para editar el perfil. Muestra las mismas preguntas que el
-/// cuestionario inicial (reutiliza sus widgets), todas en una lista, más el
-/// nombre de usuario.
+/// Formulario para editar el perfil. Reutiliza las preguntas del
+/// cuestionario inicial, cada una dentro de una tarjeta plegable con su
+/// icono y un resumen de lo elegido, para que la pantalla no sea una lista
+/// enorme.
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
 
@@ -28,6 +30,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   /// Copia del perfil que se va editando; se guarda al pulsar "Guardar".
   late UserProfile _draft;
   bool _loaded = false;
+
+  /// True mientras se guarda: los botones de guardar se desactivan.
+  bool _saving = false;
 
   @override
   void didChangeDependencies() {
@@ -52,9 +57,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       PhysicalStep.validate(_draft) ??
       AvailabilityStep.validate(_draft) ??
       EquipmentStep.validate(_draft);
-
-  /// True mientras se guarda: los botones de guardar se desactivan.
-  bool _saving = false;
 
   /// Guarda con el mismo método que "Ajustes de entrenamiento": si cambian
   /// días, minutos, material, lesiones, objetivo o experiencia, también se
@@ -82,14 +84,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (!saved && mounted) setState(() => _saving = false);
   }
 
-  /// Redibuja cuando una sección cambia una respuesta.
+  /// Redibuja cuando una sección cambia una respuesta (así se actualizan
+  /// los resúmenes de las tarjetas).
   void _onChanged() => setState(() {});
+
+  // --- Resúmenes de cada tarjeta ---
+
+  String get _personalSummary {
+    final fullName = '${_draft.name} ${_draft.surname}'.trim();
+    final username = _username.text.trim();
+    return [
+      fullName.isEmpty ? 'Sin nombre' : fullName,
+      if (username.isNotEmpty) '@$username',
+    ].join(' · ');
+  }
+
+  String get _physicalSummary {
+    final kg = _draft.weightKg;
+    final weight = kg == kg.roundToDouble()
+        ? kg.toStringAsFixed(0)
+        : kg.toStringAsFixed(1).replaceAll('.', ',');
+    final age = _draft.age;
+    return [
+      _draft.sex,
+      if (age != null) '$age años',
+      '${_draft.heightCm.toStringAsFixed(0)} cm',
+      '$weight kg',
+    ].join(' · ');
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Separación entre secciones.
-    const gap = SizedBox(height: 32);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Editar perfil'),
@@ -103,35 +128,259 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          PersonalStep(profile: _draft, onChanged: _onChanged),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _username,
-            decoration: const InputDecoration(
-              labelText: 'Nombre de usuario',
-              prefixText: '@',
-            ),
+          _Header(profile: _draft),
+          const SizedBox(height: 16),
+          const _SectionTitle(Icons.person_outline, 'Sobre ti'),
+          _SectionCard(
+            icon: Icons.badge_outlined,
+            title: 'Datos personales',
+            summary: _personalSummary,
+            children: [
+              PersonalStep(profile: _draft, onChanged: _onChanged),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _username,
+                onChanged: (_) => _onChanged(),
+                decoration: const InputDecoration(
+                  labelText: 'Nombre de usuario',
+                  prefixText: '@',
+                ),
+              ),
+            ],
           ),
-          gap,
-          PhysicalStep(profile: _draft, onChanged: _onChanged),
-          gap,
-          GoalStep(profile: _draft, onChanged: _onChanged),
-          gap,
-          ActivityStep(profile: _draft, onChanged: _onChanged),
-          gap,
-          ExperienceStep(profile: _draft, onChanged: _onChanged),
-          gap,
-          AvailabilityStep(profile: _draft, onChanged: _onChanged),
-          gap,
-          EquipmentStep(profile: _draft, onChanged: _onChanged),
-          gap,
-          InjuriesStep(profile: _draft, onChanged: _onChanged),
-          gap,
-          FilledButton(
+          _SectionCard(
+            icon: Icons.monitor_weight_outlined,
+            title: 'Medidas',
+            summary: _physicalSummary,
+            children: [PhysicalStep(profile: _draft, onChanged: _onChanged)],
+          ),
+          _SectionCard(
+            icon: Icons.directions_walk,
+            title: 'Actividad diaria',
+            summary: _draft.activityLevel.label,
+            children: [ActivityStep(profile: _draft, onChanged: _onChanged)],
+          ),
+          const SizedBox(height: 16),
+          const _SectionTitle(Icons.fitness_center, 'Entrenamiento'),
+          _SectionCard(
+            icon: Icons.flag_outlined,
+            title: 'Objetivo',
+            summary: _draft.goal.label,
+            children: [GoalStep(profile: _draft, onChanged: _onChanged)],
+          ),
+          _SectionCard(
+            icon: Icons.military_tech_outlined,
+            title: 'Experiencia',
+            summary: _draft.experience,
+            children: [ExperienceStep(profile: _draft, onChanged: _onChanged)],
+          ),
+          for (final setting in TrainingSetting.values)
+            _SectionCard(
+              icon: setting.icon,
+              title: setting.label,
+              summary: setting.summary(_draft),
+              children: [_settingStep(setting)],
+            ),
+          const SizedBox(height: 16),
+          const _SectionTitle(Icons.palette_outlined, 'Apariencia'),
+          const _ThemeCard(),
+          const SizedBox(height: 24),
+          FilledButton.icon(
             onPressed: _saving ? null : _save,
-            child: const Text('Guardar cambios'),
+            icon: const Icon(Icons.check),
+            label: const Text('Guardar cambios'),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Pregunta del cuestionario de cada ajuste de entrenamiento.
+  Widget _settingStep(TrainingSetting setting) => switch (setting) {
+    TrainingSetting.days => AvailabilityStep(
+      profile: _draft,
+      onChanged: _onChanged,
+    ),
+    TrainingSetting.equipment => EquipmentStep(
+      profile: _draft,
+      onChanged: _onChanged,
+    ),
+    TrainingSetting.injuries => InjuriesStep(
+      profile: _draft,
+      onChanged: _onChanged,
+    ),
+  };
+}
+
+/// Cabecera con la inicial, el nombre y el correo.
+class _Header extends StatelessWidget {
+  const _Header({required this.profile});
+
+  final UserProfile profile;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final name = profile.name.trim();
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 28,
+              backgroundColor: scheme.primaryContainer,
+              foregroundColor: scheme.onPrimaryContainer,
+              child: Text(
+                name.isEmpty ? '?' : name[0].toUpperCase(),
+                style: text.headlineSmall?.copyWith(
+                  color: scheme.onPrimaryContainer,
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name.isEmpty ? 'Sin nombre' : name,
+                    style: text.titleLarge,
+                  ),
+                  Text(
+                    profile.email,
+                    style: text.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Toca una sección para cambiarla.',
+                    style: text.bodySmall?.copyWith(color: scheme.outline),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Título pequeño que agrupa varias tarjetas.
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.icon, this.title);
+
+  final IconData icon;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: scheme.primary),
+          const SizedBox(width: 8),
+          Text(
+            title.toUpperCase(),
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: scheme.primary,
+              letterSpacing: 1.1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Tarjeta plegable: cerrada muestra el icono, el título y el resumen;
+/// abierta, la pregunta del cuestionario para cambiarlo.
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({
+    required this.icon,
+    required this.title,
+    required this.summary,
+    required this.children,
+  });
+
+  final IconData icon;
+  final String title;
+  final String summary;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        leading: CircleAvatar(
+          backgroundColor: scheme.primaryContainer.withValues(alpha: 0.18),
+          foregroundColor: scheme.primary,
+          child: Icon(icon, size: 20),
+        ),
+        title: Text(title),
+        subtitle: Text(
+          summary,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: scheme.onSurfaceVariant),
+        ),
+        // Sin las líneas que ExpansionTile dibuja por defecto al abrirse.
+        shape: const Border(),
+        collapsedShape: const Border(),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
+    );
+  }
+}
+
+/// Elegir tema claro u oscuro. Se aplica y se guarda al momento (no hace
+/// falta pulsar "Guardar"), porque no es un dato del perfil sino del
+/// dispositivo.
+class _ThemeCard extends StatelessWidget {
+  const _ThemeCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final store = SessionScope.of(context);
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('Tema de la app'),
+            const SizedBox(height: 12),
+            SegmentedButton<ThemeMode>(
+              segments: const [
+                ButtonSegment(
+                  value: ThemeMode.dark,
+                  icon: Icon(Icons.dark_mode),
+                  label: Text('Oscuro'),
+                ),
+                ButtonSegment(
+                  value: ThemeMode.light,
+                  icon: Icon(Icons.light_mode),
+                  label: Text('Claro'),
+                ),
+              ],
+              selected: {store.themeMode},
+              onSelectionChanged: (selection) =>
+                  store.setThemeMode(selection.first),
+            ),
+          ],
+        ),
       ),
     );
   }
