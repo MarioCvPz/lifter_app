@@ -12,6 +12,10 @@ class AppTheme {
   static const coral = Color(0xFFFF6B4A);
   static const coralLight = Color(0xFFFF8C6B);
 
+  /// Azul de los pasos en Progreso. Es un tono medio para que se lea sobre
+  /// las tarjetas blancas del tema claro y sobre las grafito del oscuro.
+  static const stepsBlue = Color(0xFF2F8FEA);
+
   /// Rojo de acciones peligrosas (cerrar sesión). Se lee bien sobre fondo
   /// oscuro y sobre fondo claro.
   static const danger = Color(0xFFE5484D);

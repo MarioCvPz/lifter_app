@@ -371,6 +371,91 @@ class NutritionEntry {
   double get fat => food.fatPer100 * grams / 100;
 }
 
+/// Id del documento de un registro diario (agua, peso, pasos): la fecha en
+/// formato aaaa-mm-dd, por ejemplo "2026-11-17". Como hay un documento por
+/// día, registrar dos veces el mismo día sobrescribe el anterior.
+String dayKey(DateTime day) =>
+    '${day.year}-${day.month.toString().padLeft(2, '0')}-'
+    '${day.day.toString().padLeft(2, '0')}';
+
+/// Días hacia atrás en los que se puede registrar el peso o los pasos.
+const maxLogDaysBack = 365;
+
+/// Mensaje de error si no se puede registrar un peso o unos pasos en [day]
+/// (un día futuro o de hace más de [maxLogDaysBack] días), o null si sí.
+/// [now] es la fecha de hoy (se pasa para poder probarlo).
+String? validateLogDay(DateTime day, DateTime now) {
+  final today = DateTime(now.year, now.month, now.day);
+  final date = DateTime(day.year, day.month, day.day);
+  if (date.isAfter(today)) return 'No puedes registrar días futuros.';
+  final oldest = DateTime(today.year, today.month, today.day - maxLogDaysBack);
+  if (date.isBefore(oldest)) {
+    return 'Solo puedes registrar hasta hace un año.';
+  }
+  return null;
+}
+
+/// Peso corporal de un día (`users/{uid}/weights/{aaaa-mm-dd}`).
+class WeightEntry {
+  const WeightEntry({required this.date, required this.kg});
+
+  /// Límites razonables para el peso de una persona adulta.
+  static const minKg = 30.0;
+  static const maxKg = 250.0;
+
+  /// Día del registro, a las 00:00.
+  final DateTime date;
+  final double kg;
+
+  /// Mensaje de error si [kg] no es válido, o null si lo es.
+  static String? validate(double? kg) {
+    if (kg == null) return 'Escribe tu peso en kg.';
+    if (kg < minKg || kg > maxKg) {
+      return 'El peso tiene que estar entre ${minKg.round()} y '
+          '${maxKg.round()} kg.';
+    }
+    return null;
+  }
+
+  factory WeightEntry.fromMap(Map<String, dynamic> m) => WeightEntry(
+    date: (m['date'] as Timestamp).toDate(),
+    kg: (m['kg'] as num?)?.toDouble() ?? 0,
+  );
+
+  Map<String, dynamic> toMap() => {'date': Timestamp.fromDate(date), 'kg': kg};
+}
+
+/// Pasos de un día (`users/{uid}/steps/{aaaa-mm-dd}`).
+class StepsEntry {
+  const StepsEntry({required this.date, required this.steps});
+
+  static const minSteps = 0;
+  static const maxSteps = 100000;
+
+  /// Día del registro, a las 00:00.
+  final DateTime date;
+  final int steps;
+
+  /// Mensaje de error si [steps] no es válido, o null si lo es.
+  static String? validate(int? steps) {
+    if (steps == null) return 'Escribe los pasos (un número entero).';
+    if (steps < minSteps || steps > maxSteps) {
+      return 'Los pasos tienen que estar entre $minSteps y 100.000.';
+    }
+    return null;
+  }
+
+  factory StepsEntry.fromMap(Map<String, dynamic> m) => StepsEntry(
+    date: (m['date'] as Timestamp).toDate(),
+    steps: (m['steps'] as num?)?.toInt() ?? 0,
+  );
+
+  Map<String, dynamic> toMap() => {
+    'date': Timestamp.fromDate(date),
+    'steps': steps,
+  };
+}
+
 enum UserRole {
   user('Usuario'),
   trainer('Entrenador'),
@@ -548,7 +633,23 @@ class UserProfile {
     this.trainingPlace = TrainingPlace.gym,
     this.injuries = const [],
     this.onboardingCompleted = false,
+    this.stepsGoal = defaultStepsGoal,
   });
+
+  /// Objetivo de pasos diario si el perfil no tiene uno.
+  static const defaultStepsGoal = 10000;
+
+  /// Límites del objetivo de pasos que puede poner el usuario.
+  static const minStepsGoal = 1000;
+  static const maxStepsGoal = 50000;
+
+  /// Mensaje de error si [goal] no es un objetivo de pasos válido, o null.
+  static String? validateStepsGoal(int goal) {
+    if (goal < minStepsGoal || goal > maxStepsGoal) {
+      return 'El objetivo tiene que estar entre 1.000 y 50.000 pasos.';
+    }
+    return null;
+  }
 
   String name;
   String username;
@@ -575,6 +676,9 @@ class UserProfile {
   TrainingPlace trainingPlace;
   List<String> injuries;
   bool onboardingCompleted;
+
+  /// Pasos al día que quiere alcanzar (para la pestaña Progreso).
+  int stepsGoal;
 
   /// Edad en años, o `null` mientras no haya fecha de nacimiento.
   int? get age {
@@ -641,6 +745,8 @@ class UserProfile {
     trainingPlace: TrainingPlace.fromName(m['trainingPlace'] as String?),
     injuries: List<String>.from(m['injuries'] as List? ?? const []),
     onboardingCompleted: m['onboardingCompleted'] as bool? ?? false,
+    // Los perfiles de antes de la pestaña Progreso no tienen objetivo.
+    stepsGoal: (m['stepsGoal'] as num?)?.toInt() ?? defaultStepsGoal,
   );
 
   Map<String, dynamic> toMap() {
@@ -664,6 +770,7 @@ class UserProfile {
       'trainingPlace': trainingPlace.name,
       'injuries': injuries,
       'onboardingCompleted': onboardingCompleted,
+      'stepsGoal': stepsGoal,
     };
   }
 }

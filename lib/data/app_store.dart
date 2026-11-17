@@ -18,6 +18,8 @@ import 'routine_generator.dart';
 ///   - `users/{uid}/routines`    → rutinas propias
 ///   - `users/{uid}/nutrition`   → registros de comidas
 ///   - `users/{uid}/plan/current` → plan de entrenamiento generado
+///   - `users/{uid}/weights`, `users/{uid}/steps` → peso y pasos, un
+///     documento por día ([dayKey])
 /// El catálogo es común a todos y también está en Firestore:
 ///   - `exercises`, `foods`, `routineTemplates` (solo los admins lo editan)
 /// Los datos calculados (rachas, macros…) están en stats.dart.
@@ -63,6 +65,10 @@ class AppStore extends ChangeNotifier {
   /// Agua bebida hoy, en ml (users/{uid}/water/{aaaa-mm-dd}).
   int waterMl = 0;
 
+  /// Registros de peso y de pasos, del más reciente al más antiguo.
+  final List<WeightEntry> weights = [];
+  final List<StepsEntry> steps = [];
+
   /// Tema elegido (oscuro por defecto). Se guarda en el propio dispositivo
   /// con shared_preferences y no en Firestore, porque es una preferencia
   /// del dispositivo y así también se aplica en la pantalla de login.
@@ -72,6 +78,12 @@ class AppStore extends ChangeNotifier {
   static const themeKey = 'themeMode';
 
   String? get currentUid => _auth.currentUser?.uid;
+
+  /// Día en que se creó la cuenta, o null si no se sabe (por ejemplo, en
+  /// los tests, que no usan Firebase). Limita hasta dónde se puede ir
+  /// hacia atrás en la pestaña Progreso.
+  DateTime? get accountCreatedAt =>
+      Firebase.apps.isEmpty ? null : _auth.currentUser?.metadata.creationTime;
 
   /// Foto de la cuenta de Google, si entró con Google.
   String? get photoUrl => _auth.currentUser?.photoURL;
@@ -104,6 +116,8 @@ class AppStore extends ChangeNotifier {
     foods.clear();
     templates.clear();
     waterMl = 0;
+    weights.clear();
+    steps.clear();
     plan = null;
     profileLoaded = false;
 
@@ -220,6 +234,26 @@ class AppStore extends ChangeNotifier {
             _myRoutines
               ..clear()
               ..addAll(snap.docs.map((d) => Routine.fromMap(d.id, d.data())));
+            notifyListeners();
+          }, onError: _onError),
+      userDoc
+          .collection('weights')
+          .orderBy('date', descending: true)
+          .snapshots()
+          .listen((snap) {
+            weights
+              ..clear()
+              ..addAll(snap.docs.map((d) => WeightEntry.fromMap(d.data())));
+            notifyListeners();
+          }, onError: _onError),
+      userDoc
+          .collection('steps')
+          .orderBy('date', descending: true)
+          .snapshots()
+          .listen((snap) {
+            steps
+              ..clear()
+              ..addAll(snap.docs.map((d) => StepsEntry.fromMap(d.data())));
             notifyListeners();
           }, onError: _onError),
       userDoc
@@ -519,6 +553,97 @@ class AppStore extends ChangeNotifier {
     );
   }
 
+  // --- Peso y pasos (pestaña Progreso y Perfil) ---
+  // Un documento por día: si se registra dos veces el mismo día, se
+  // sobrescribe. Se puede registrar hoy o un día anterior (ver
+  // [validateLogDay]). Como el resto de escrituras, no se espera a
+  // Firestore; devuelven el mensaje de error de la validación, o null.
+
+  /// Guarda [kg] como el peso de [day] (hoy si no se indica). Si es el
+  /// registro más reciente, también lo pone en el perfil (`weightKg`), para
+  /// que las calorías usen el peso más reciente. Un peso de hace unos días
+  /// no cambia el perfil si ya hay uno posterior.
+  String? saveWeight(double kg, {DateTime? day}) {
+    final date = _dateOnly(day ?? DateTime.now());
+    final error =
+        validateLogDay(date, DateTime.now()) ?? WeightEntry.validate(kg);
+    if (error != null) return error;
+    final entry = WeightEntry(date: date, kg: kg);
+    _putInOrder(weights, entry, (e) => e.date);
+    // La lista va de más reciente a más antiguo: si quedó la primera, es
+    // la más reciente.
+    final isLatest = identical(weights.first, entry);
+    if (isLatest) user?.weightKg = kg;
+    notifyListeners();
+    final uid = _sessionUid;
+    if (uid == null) return null; // en los tests no hay Firebase
+    // Los dos a la vez: o se guardan el registro y el perfil, o ninguno.
+    final batch = _db.batch()
+      ..set(
+        _userDoc(uid).collection('weights').doc(dayKey(entry.date)),
+        entry.toMap(),
+      );
+    if (isLatest) batch.update(_userDoc(uid), {'weightKg': kg});
+    _save(batch.commit());
+    return null;
+  }
+
+  /// Guarda [count] como los pasos de [day] (hoy si no se indica).
+  String? saveSteps(int count, {DateTime? day}) {
+    final date = _dateOnly(day ?? DateTime.now());
+    final error =
+        validateLogDay(date, DateTime.now()) ?? StepsEntry.validate(count);
+    if (error != null) return error;
+    final entry = StepsEntry(date: date, steps: count);
+    _putInOrder(steps, entry, (e) => e.date);
+    notifyListeners();
+    final uid = _sessionUid;
+    if (uid == null) return null;
+    _save(
+      _userDoc(
+        uid,
+      ).collection('steps').doc(dayKey(entry.date)).set(entry.toMap()),
+    );
+    return null;
+  }
+
+  /// Borra el peso de ese día. Si era el más reciente, el perfil pasa a
+  /// tener el peso del registro anterior (si queda alguno).
+  void deleteWeight(DateTime day) {
+    final wasLatest =
+        weights.isNotEmpty && dayKey(weights.first.date) == dayKey(day);
+    weights.removeWhere((e) => dayKey(e.date) == dayKey(day));
+    final newLatest = wasLatest && weights.isNotEmpty ? weights.first : null;
+    if (newLatest != null) user?.weightKg = newLatest.kg;
+    notifyListeners();
+    final uid = _sessionUid;
+    if (uid == null) return;
+    final batch = _db.batch()
+      ..delete(_userDoc(uid).collection('weights').doc(dayKey(day)));
+    if (newLatest != null) {
+      batch.update(_userDoc(uid), {'weightKg': newLatest.kg});
+    }
+    _save(batch.commit());
+  }
+
+  /// El día de [date] a las 00:00.
+  static DateTime _dateOnly(DateTime date) =>
+      DateTime(date.year, date.month, date.day);
+
+  /// Pone [entry] en [list] en su sitio por fecha (la lista va de la más
+  /// reciente a la más antigua) y quita el registro que hubiera del mismo
+  /// día. Así la pantalla se actualiza sin esperar al listener.
+  static void _putInOrder<T>(
+    List<T> list,
+    T entry,
+    DateTime Function(T) dateOf,
+  ) {
+    list.removeWhere((e) => dayKey(dateOf(e)) == dayKey(dateOf(entry)));
+    // Primera posición cuyo registro es más antiguo que el nuevo.
+    final index = list.indexWhere((e) => dateOf(e).isBefore(dateOf(entry)));
+    list.insert(index == -1 ? list.length : index, entry);
+  }
+
   // --- Tema (claro u oscuro) ---
 
   /// Lee el tema guardado en el dispositivo. Se llama al arrancar la app.
@@ -729,12 +854,8 @@ class AppStore extends ChangeNotifier {
   /// Usuarios a los que he asignado alguna rutina (mis clientes).
   Set<String> get myClientIds => {for (final a in assignedByMe) a.userId};
 
-  DocumentReference<Map<String, dynamic>> _waterDoc(String uid, DateTime day) {
-    final key =
-        '${day.year}-${day.month.toString().padLeft(2, '0')}-'
-        '${day.day.toString().padLeft(2, '0')}';
-    return _userDoc(uid).collection('water').doc(key);
-  }
+  DocumentReference<Map<String, dynamic>> _waterDoc(String uid, DateTime day) =>
+      _userDoc(uid).collection('water').doc(dayKey(day));
 
   DocumentReference<Map<String, dynamic>> _planDoc(String uid) =>
       _userDoc(uid).collection('plan').doc('current');

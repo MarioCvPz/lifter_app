@@ -4,6 +4,7 @@ import '../models/models.dart';
 import 'app_store.dart';
 import 'nutrition_calculator.dart';
 import 'routine_generator.dart';
+import 'week_summary.dart';
 import 'workout_draft.dart';
 
 /// Datos calculados a partir de lo que hay en el store: rachas, volumen,
@@ -298,6 +299,48 @@ extension AppStoreStats on AppStore {
 
   /// Objetivo de agua del perfil de la sesión (ver [waterGoalMlFor]).
   int get waterGoalMl => waterGoalMlFor(user);
+
+  // --- Progreso: semana, peso y pasos ---
+
+  /// Resumen de la semana que contiene [weekStart] con los datos de la
+  /// sesión (ver [WeekSummary]).
+  WeekSummary weekSummary(DateTime weekStart, {DateTime? today}) => WeekSummary(
+    weekStart: weekStart,
+    today: today ?? DateTime.now(),
+    plan: plan,
+    workouts: workouts,
+    nutrition: nutritionLogs,
+    kcalGoal: macroTargets().kcal,
+    weights: weights,
+    steps: steps,
+    stepsGoal: stepsGoalInUse,
+  );
+
+  /// Objetivo de pasos que se usa en Progreso. Es el único sitio que lo
+  /// decide: ahora es el del perfil del usuario; cuando el entrenador pueda
+  /// poner uno (prompt 7), irá aquí delante y tendrá prioridad.
+  int get stepsGoalInUse => user?.stepsGoal ?? UserProfile.defaultStepsGoal;
+
+  /// Peso apuntado ese día, o null. Rellena la hoja de "+ Peso".
+  WeightEntry? weightOn(DateTime day) {
+    for (final e in weights) {
+      if (DateUtils.isSameDay(e.date, day)) return e;
+    }
+    return null;
+  }
+
+  /// Pasos apuntados ese día, o null.
+  StepsEntry? stepsOn(DateTime day) {
+    for (final e in steps) {
+      if (DateUtils.isSameDay(e.date, day)) return e;
+    }
+    return null;
+  }
+
+  /// Últimos [limit] pesos, del más antiguo al más reciente (el orden del
+  /// gráfico, de izquierda a derecha).
+  List<WeightEntry> recentWeights({int limit = 12}) =>
+      weights.take(limit).toList().reversed.toList();
 
   /// Objetivo de agua orientativo: 35 ml por kg, redondeado a 100 ml.
   /// Es un método aparte porque un getter no puede recibir parámetros.

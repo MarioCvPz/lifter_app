@@ -88,7 +88,12 @@ void main() {
 
   test('CP-14 Solo con peso corporal recibe solo ejercicios de peso '
       'corporal', () {
-    final profile = planProfile(equipment: ['Peso corporal']);
+    // En casa: en el gimnasio el peso corporal solo entra en los huecos de
+    // core, así que con solo ese material el plan saldría casi vacío.
+    final profile = planProfile(
+      equipment: ['Peso corporal'],
+      trainingPlace: TrainingPlace.home,
+    );
     final exercises = allExercises(RoutineGenerator.generate(profile, catalog));
 
     expect(exercises, isNotEmpty);
@@ -213,6 +218,40 @@ void main() {
     }
     // Prefiere los de su nivel: un avanzado recibe ejercicios de avanzado.
     expect(allExercises(plan).map((e) => e.level), contains('Avanzado'));
+  });
+
+  test('CP-14 En el gimnasio con lesión de codo, Empuje no lleva peso '
+      'corporal ni bandas', () {
+    // Antes, el segundo hueco de empuje horizontal se quedaba sin
+    // ejercicios de gimnasio y recibía "Flexiones declinadas".
+    final profile = planProfile(injuries: ['Codo']);
+    final plan = RoutineGenerator.generate(profile, catalog);
+    final push = plan.days.firstWhere((d) => d.type == PlanDayType.push);
+
+    expect(push.exercises, isNotEmpty);
+    expect(namesOf(push), isNot(contains('Flexiones declinadas')));
+    for (final e in push.exercises.map((p) => p.exercise)) {
+      expect(RoutineGenerator.gymEquipment, contains(e.equipment));
+      expect(e.stressedZones, isNot(contains('Codo')), reason: e.name);
+    }
+    // El hueco se rellena con otro ejercicio de pecho de gimnasio.
+    expect(namesOf(push), contains('Cruce de poleas'));
+  });
+
+  test('CP-14 En el gimnasio, el peso corporal solo entra en los huecos de '
+      'core', () {
+    final profile = planProfile(
+      experience: 'Avanzado',
+      trainingDays: [1, 2, 3, 4, 5, 6],
+      sessionMinutes: 90,
+      injuries: ['Codo', 'Hombro'],
+    );
+    for (final e in allExercises(RoutineGenerator.generate(profile, catalog))) {
+      expect(e.equipment, isNot('Bandas elásticas'), reason: e.name);
+      if (e.equipment == RoutineGenerator.bodyweightEquipment) {
+        expect(e.pattern, MovementPattern.core, reason: e.name);
+      }
+    }
   });
 
   test('CP-14 En casa se siguen usando mancuernas, bandas y peso '

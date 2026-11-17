@@ -11,6 +11,7 @@ import '../onboarding/steps/injuries_step.dart';
 import '../onboarding/steps/personal_step.dart';
 import '../onboarding/steps/physical_step.dart';
 import 'save_training_profile.dart';
+import 'steps_goal_step.dart';
 import 'training_settings.dart';
 
 /// Formulario para editar el perfil. Reutiliza las preguntas del
@@ -56,7 +57,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       PersonalStep.validate(_draft) ??
       PhysicalStep.validate(_draft) ??
       AvailabilityStep.validate(_draft) ??
-      EquipmentStep.validate(_draft);
+      EquipmentStep.validate(_draft) ??
+      StepsGoalStep.validate(_draft);
 
   /// Guarda con el mismo método que "Ajustes de entrenamiento": si cambian
   /// días, minutos, material, lesiones, objetivo o experiencia, también se
@@ -206,6 +208,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       onChanged: _onChanged,
     ),
     TrainingSetting.injuries => InjuriesStep(
+      profile: _draft,
+      onChanged: _onChanged,
+    ),
+    TrainingSetting.stepsGoal => StepsGoalStep(
       profile: _draft,
       onChanged: _onChanged,
     ),

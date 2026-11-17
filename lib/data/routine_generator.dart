@@ -168,9 +168,9 @@ class RoutineGenerator {
   /// Palabra del nombre que distingue un press inclinado de uno plano.
   static const inclineWord = 'inclinado';
 
-  // Preferencia de material en el gimnasio: primero el de gimnasio; el peso
-  // corporal solo si no hay ninguno de esos para el hueco; las bandas
-  // elásticas, nunca.
+  // Material en el gimnasio: solo el de gimnasio. El peso corporal solo
+  // entra en los huecos de core (y solo si no hay uno de gimnasio); las
+  // bandas elásticas, nunca. Ver [preferPlaceEquipment].
   static const gymEquipment = [
     'Barra',
     'Mancuernas',
@@ -185,7 +185,7 @@ class RoutineGenerator {
   /// el usuario guarde sus ajustes. Es el día siguiente al cambio para que
   /// también cuenten como antiguos los planes creados ese mismo día con las
   /// reglas anteriores. Si se cambian las reglas, hay que mover esta fecha.
-  static final rulesDate = DateTime(2026, 11, 12);
+  static final rulesDate = DateTime(2026, 11, 18);
 
   /// True si [plan] se generó con una versión anterior de las reglas.
   static bool isOutdated(TrainingPlan plan) =>
@@ -283,6 +283,7 @@ class RoutineGenerator {
         usedToday: {for (final e in chosen) e.id},
         usedInWeek: usedInWeek,
         pairedWith: pairedWith,
+        sameMuscleFallback: true,
       );
       lastPattern = pattern;
       lastPick = pick;
@@ -293,8 +294,12 @@ class RoutineGenerator {
 
   /// Regla 3: elige el ejercicio de un hueco, o null si no hay ninguno.
   /// Primero busca respetando el nivel; si no hay nada, lo ignora. El
-  /// material y las lesiones nunca se ignoran. Entre los candidatos
-  /// prefiere, por este orden:
+  /// material y las lesiones nunca se ignoran. Con [sameMuscleFallback]
+  /// (al rellenar los huecos del generador), si aún no hay nada, busca un
+  /// ejercicio del mismo grupo muscular ([sameMuscleCandidates]). No se usa
+  /// al sustituir un ejercicio del usuario, para no cambiarle, por ejemplo,
+  /// una sentadilla búlgara por un ejercicio de otro tipo. Entre los
+  /// candidatos prefiere, por este orden:
   /// 1. uno no usado en el otro día del mismo tipo y que varíe el ángulo
   ///    respecto a [pairedWith] (plano/inclinado);
   /// 2. uno no usado en el otro día del mismo tipo;
@@ -307,6 +312,7 @@ class RoutineGenerator {
     Set<String> usedToday = const {},
     Set<String> usedInWeek = const {},
     Exercise? pairedWith,
+    bool sameMuscleFallback = false,
   }) {
     var options = candidates(pattern, profile, catalog, exclude: usedToday);
     if (options.isEmpty) {
@@ -318,7 +324,15 @@ class RoutineGenerator {
         ignoreLevel: true,
       );
     }
-    if (options.isEmpty) return null;
+    if (options.isEmpty && sameMuscleFallback) {
+      options = sameMuscleCandidates(
+        pattern,
+        profile,
+        catalog,
+        exclude: usedToday,
+      );
+    }
+    if (options.isEmpty) return null; // el hueco se salta
 
     bool newThisWeek(Exercise e) => !usedInWeek.contains(e.id);
     bool variesAngle(Exercise e) =>
@@ -345,27 +359,73 @@ class RoutineGenerator {
     final valid = [
       for (final e in catalog)
         if (e.pattern == pattern &&
-            !exclude.contains(e.id) &&
-            isDoable(e, profile) &&
-            (ignoreLevel || levelAllowed(e, profile)))
+            _isValid(e, profile, exclude: exclude, ignoreLevel: ignoreLevel))
           e,
     ];
-    return byPreference(preferPlaceEquipment(valid, profile), profile);
+    return byPreference(preferPlaceEquipment(valid, profile, pattern), profile);
   }
 
-  /// En el gimnasio, se queda con los ejercicios de [gymEquipment]; si no
-  /// hay ninguno, con los de peso corporal; las bandas nunca entran. En casa
-  /// y al aire libre no cambia nada.
+  /// Plan B del gimnasio cuando un hueco se queda sin ejercicios de su
+  /// patrón (por ejemplo, con lesión de codo casi no quedan press de pecho):
+  /// ejercicios de gimnasio del mismo grupo muscular que el patrón ("Pecho")
+  /// que el usuario pueda hacer y que no estén en [exclude]. Primero
+  /// respetando el nivel y, si no hay, ignorándolo. En casa, al aire libre
+  /// o en los huecos de core no hay plan B (lista vacía).
+  static List<Exercise> sameMuscleCandidates(
+    MovementPattern pattern,
+    UserProfile profile,
+    List<Exercise> catalog, {
+    Set<String> exclude = const {},
+  }) {
+    if (profile.trainingPlace != TrainingPlace.gym ||
+        pattern == MovementPattern.core) {
+      return const [];
+    }
+    final groups = {
+      for (final e in catalog)
+        if (e.pattern == pattern) e.muscleGroup,
+    };
+    List<Exercise> search({required bool ignoreLevel}) => byPreference([
+      for (final e in catalog)
+        if (groups.contains(e.muscleGroup) &&
+            gymEquipment.contains(e.equipment) &&
+            _isValid(e, profile, exclude: exclude, ignoreLevel: ignoreLevel))
+          e,
+    ], profile);
+    final withLevel = search(ignoreLevel: false);
+    return withLevel.isNotEmpty ? withLevel : search(ignoreLevel: true);
+  }
+
+  /// Filtros obligatorios de un candidato: no está en [exclude], tiene el
+  /// material, no carga sus lesiones y (si no se ignora) es de su nivel.
+  static bool _isValid(
+    Exercise e,
+    UserProfile profile, {
+    required Set<String> exclude,
+    required bool ignoreLevel,
+  }) =>
+      !exclude.contains(e.id) &&
+      isDoable(e, profile) &&
+      (ignoreLevel || levelAllowed(e, profile));
+
+  /// Material según el lugar. En casa y al aire libre no cambia nada. En el
+  /// gimnasio:
+  /// - en los huecos de core: los de [gymEquipment] y, si no hay ninguno,
+  ///   los de peso corporal;
+  /// - en el resto: solo los de [gymEquipment] (ni peso corporal ni
+  ///   bandas).
+  /// Las bandas elásticas nunca entran en el gimnasio.
   static List<Exercise> preferPlaceEquipment(
     List<Exercise> valid,
     UserProfile profile,
+    MovementPattern pattern,
   ) {
     if (profile.trainingPlace != TrainingPlace.gym) return valid;
     final gym = [
       for (final e in valid)
         if (gymEquipment.contains(e.equipment)) e,
     ];
-    if (gym.isNotEmpty) return gym;
+    if (gym.isNotEmpty || pattern != MovementPattern.core) return gym;
     return [
       for (final e in valid)
         if (e.equipment == bodyweightEquipment) e,

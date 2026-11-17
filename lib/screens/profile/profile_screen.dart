@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/achievements.dart';
 import '../../data/app_store.dart';
+import '../../data/formatters.dart';
 import '../../data/stats.dart';
 import '../../models/models.dart';
 import '../../theme/app_theme.dart';
@@ -9,6 +10,7 @@ import '../../widgets/brand.dart';
 import '../../widgets/help.dart';
 import '../admin/admin_screen.dart';
 import '../trainer/trainer_screen.dart';
+import 'body_weight_card.dart';
 import 'edit_profile_screen.dart';
 import 'training_settings.dart';
 
@@ -112,6 +114,8 @@ class ProfileScreen extends StatelessWidget {
           _StreakBanner(current: store.streakDays(), best: store.bestStreak()),
           const SizedBox(height: 12),
           _InfoRow(user: user),
+          const SizedBox(height: 12),
+          BodyWeightCard(store: store),
 
           // --- Ajustes de entrenamiento ---
           const SizedBox(height: 28),
@@ -361,7 +365,7 @@ class _BadgeTile extends StatelessWidget {
             Text(
               a.unlocked
                   ? '¡Conseguida!'
-                  : '${_fmt(a.current)} / ${_fmt(a.target)} ${a.unit}',
+                  : '${formatThousands(a.current)} / ${formatThousands(a.target)} ${a.unit}',
             ),
           ],
         ),
@@ -373,12 +377,6 @@ class _BadgeTile extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  static String _fmt(num n) {
-    // Separador de miles con punto: 10000 → 10.000.
-    final s = n.round().toString();
-    return s.replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => '.');
   }
 
   @override
@@ -464,7 +462,7 @@ class _StatsGrid extends StatelessWidget {
       (Icons.timer_outlined, _hours(minutes), 'Tiempo total', scheme.tertiary),
       (
         Icons.bar_chart,
-        '${_BadgeTile._fmt(volume)} kg',
+        '${formatThousands(volume)} kg',
         'Volumen total',
         AppTheme.coral,
       ),

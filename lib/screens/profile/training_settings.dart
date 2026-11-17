@@ -1,19 +1,24 @@
 import 'package:flutter/material.dart';
 
 import '../../data/app_store.dart';
+import '../../data/formatters.dart';
 import '../../models/models.dart';
 import '../../widgets/brand.dart';
 import '../onboarding/steps/availability_step.dart';
 import '../onboarding/steps/equipment_step.dart';
 import '../onboarding/steps/injuries_step.dart';
 import 'save_training_profile.dart';
+import 'steps_goal_step.dart';
 
 /// Opciones de "Ajustes de entrenamiento". Cada una abre la misma pantalla
-/// del cuestionario (su widget de paso) con un botón "Guardar".
+/// del cuestionario (su widget de paso) con un botón "Guardar". El
+/// objetivo de pasos no está en el cuestionario: tiene su propio paso
+/// ([StepsGoalStep]) y no cambia el plan, solo la nota de Progreso.
 enum TrainingSetting {
   days('Días de entrenamiento', Icons.calendar_month),
   equipment('Material', Icons.fitness_center),
-  injuries('Lesiones', Icons.healing);
+  injuries('Lesiones', Icons.healing),
+  stepsGoal('Objetivo de pasos', Icons.directions_walk);
 
   const TrainingSetting(this.label, this.icon);
 
@@ -28,6 +33,8 @@ enum TrainingSetting {
     TrainingSetting.equipment => '${profile.equipment.length} elegidos',
     TrainingSetting.injuries =>
       profile.injuries.isEmpty ? 'Ninguna' : profile.injuries.join(', '),
+    TrainingSetting.stepsGoal =>
+      '${formatThousands(profile.stepsGoal)} pasos al día',
   };
 
   /// Las mismas validaciones que en el cuestionario.
@@ -35,6 +42,7 @@ enum TrainingSetting {
     TrainingSetting.days => AvailabilityStep.validate(profile),
     TrainingSetting.equipment => EquipmentStep.validate(profile),
     TrainingSetting.injuries => null, // "Ninguna" también vale
+    TrainingSetting.stepsGoal => StepsGoalStep.validate(profile),
   };
 }
 
@@ -140,6 +148,10 @@ class _TrainingSettingScreenState extends State<TrainingSettingScreen> {
       onChanged: _onChanged,
     ),
     TrainingSetting.injuries => InjuriesStep(
+      profile: _draft,
+      onChanged: _onChanged,
+    ),
+    TrainingSetting.stepsGoal => StepsGoalStep(
       profile: _draft,
       onChanged: _onChanged,
     ),

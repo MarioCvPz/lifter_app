@@ -4,7 +4,7 @@ import '../../theme/app_theme.dart';
 import '../home/home_screen.dart';
 import '../nutrition/nutrition_screen.dart';
 import '../profile/profile_screen.dart';
-import '../routines/routines_screen.dart';
+import '../progress/progress_screen.dart';
 import '../workouts/workouts_screen.dart';
 
 class MainShell extends StatefulWidget {
@@ -27,7 +27,9 @@ class _MainShellState extends State<MainShell> {
   late final _pages = [
     HomeScreen(onOpenNutrition: () => _select(_nutritionIndex)),
     const WorkoutsScreen(),
-    const RoutinesScreen(),
+    // Progreso ocupa el sitio de Rutinas. RoutinesScreen sigue en el
+    // proyecto, pero de momento no está en la barra.
+    const ProgressScreen(),
     const NutritionScreen(),
     const ProfileScreen(),
   ];
@@ -37,7 +39,7 @@ class _MainShellState extends State<MainShell> {
   static const _items = [
     (Icons.home_outlined, Icons.home, 'Inicio'),
     (Icons.fitness_center_outlined, Icons.fitness_center, 'Entrenos'),
-    (Icons.calendar_today_outlined, Icons.calendar_today, 'Rutinas'),
+    (Icons.bar_chart_outlined, Icons.bar_chart, 'Progreso'),
     (Icons.restaurant_outlined, Icons.restaurant, 'Nutrición'),
     (Icons.person_outline, Icons.person, 'Perfil'),
   ];

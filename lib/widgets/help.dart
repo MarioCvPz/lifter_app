@@ -76,7 +76,7 @@ enum HelpTopic {
       Icons.add,
       'Registrar',
       'Pulsa "Registrar" para apuntar un entreno nuevo desde cero. Para '
-          'empezar desde una rutina, hazlo desde Rutinas o Inicio.',
+          'hacer el entreno de tu plan, usa la tarjeta de arriba o Inicio.',
     ),
     (
       Icons.swipe_left,
@@ -205,6 +205,50 @@ enum HelpTopic {
     ),
   ]),
 
+  progress('Cómo funciona Progreso', [
+    (
+      Icons.donut_large,
+      'Nota de la semana',
+      'De 0 a 100: el 50 % son los entrenos (los hechos frente a los de tu '
+          'plan), el 30 % la nutrición (días con comida apuntada, de 7) y el '
+          '20 % los pasos (tu media frente a tu objetivo). Cada parte es un '
+          'anillo: coral, entrenos; verde, nutrición; azul, pasos.',
+    ),
+    (
+      Icons.date_range,
+      'Otras semanas',
+      'Con ‹ y › cambias de semana (hasta 12 hacia atrás). ▲ o ▼ dice '
+          'cuántos puntos subes o bajas respecto a la semana anterior.',
+    ),
+    (
+      Icons.check_circle,
+      'Círculos de entrenos',
+      'Coral con ✓: entreno hecho. Borde coral discontinuo: te toca y aún '
+          'no ha pasado el día. Gris con –: te tocaba y no entrenaste. Punto '
+          'gris: descanso.',
+    ),
+    (
+      Icons.restaurant,
+      'Círculos de nutrición',
+      'Verde relleno: comiste dentro del ±10 % de tus calorías. Anillo '
+          'verde: apuntaste comida, pero fuera de ese margen. Anillo gris: no '
+          'apuntaste nada.',
+    ),
+    (
+      Icons.add_circle_outline,
+      'Registrar peso y pasos',
+      'Pulsa "Registrar pasos" o "Registrar peso". Se guarda en hoy; toca '
+          'la fecha para apuntar otro día (hasta hace un año). Si ese día ya '
+          'tenía un valor, se cambia por el nuevo.',
+    ),
+    (
+      Icons.directions_walk,
+      'Objetivo de pasos',
+      'Son 10.000 al día si no lo cambias. Puedes cambiarlo en Perfil → '
+          'Ajustes de entrenamiento → Objetivo de pasos.',
+    ),
+  ]),
+
   profile('Cómo funciona el Perfil', [
     (
       Icons.edit,
@@ -253,7 +297,8 @@ enum HelpTopic {
       Icons.assignment_add,
       'Asignar rutina',
       'Pulsa "Asignar rutina", elige el usuario y crea su rutina. Le '
-          'aparecerá en Rutinas → "De tu entrenador".',
+          'aparecerá en Inicio y en Entrenos, en sus días de entreno, en '
+          'lugar del entreno de su plan.',
     ),
     (
       Icons.groups,
