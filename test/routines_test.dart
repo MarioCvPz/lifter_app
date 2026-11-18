@@ -40,7 +40,10 @@ void main() {
     await tester.pump();
     expect(save().onPressed, isNull);
 
-    // Con nombre y un ejercicio: sí.
+    // Con nombre y un ejercicio: sí. Los ejercicios están en un
+    // desplegable por músculo: primero se abre "Piernas".
+    await tester.tap(find.text('Piernas'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Sentadilla'));
     await tester.pump();
     expect(save().onPressed, isNotNull);

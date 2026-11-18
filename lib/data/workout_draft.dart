@@ -32,9 +32,10 @@ class DraftExercise {
     this.maxReps,
     this.restSeconds = defaultRestSeconds,
     this.originalId,
+    this.trainerNote,
   }) : sets = [for (var i = 0; i < targetSets; i++) DraftSet()];
 
-  /// Con el objetivo que marca el plan.
+  /// Con el objetivo que marca el plan (y la nota del entrenador, si hay).
   factory DraftExercise.fromPlan(PlanExercise planned) => DraftExercise(
     exercise: planned.exercise,
     targetSets: planned.sets,
@@ -42,6 +43,7 @@ class DraftExercise {
     maxReps: planned.maxReps,
     restSeconds: planned.restSeconds,
     originalId: planned.exercise.id,
+    trainerNote: planned.trainerNote,
   );
 
   /// Con los valores por defecto (3 series, sin objetivo de reps y 90 s),
@@ -67,6 +69,9 @@ class DraftExercise {
   /// Id del ejercicio del plan o de la rutina que ocupa este hueco, o null
   /// si se ha añadido hoy. Sirve para saber al terminar qué ha cambiado.
   final String? originalId;
+
+  /// Nota que dejó el entrenador en este ejercicio del plan, o null.
+  final String? trainerNote;
 
   /// Comentario de hoy ("Molestia en el hombro…"). Vacío si no hay.
   String comment = '';

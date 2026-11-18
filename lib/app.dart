@@ -5,6 +5,7 @@ import 'data/app_store.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/onboarding/onboarding_screen.dart';
 import 'screens/shell/main_shell.dart';
+import 'screens/trainer/trainer_shell.dart';
 import 'theme/app_theme.dart';
 
 class LifterApp extends StatefulWidget {
@@ -21,7 +22,8 @@ class _LifterAppState extends State<LifterApp> {
       widget.store ??
       (AppStore()
         ..start()
-        ..loadThemeMode());
+        ..loadThemeMode()
+        ..loadTrainerMode());
 
   @override
   void dispose() {
@@ -68,7 +70,8 @@ class _LifterAppState extends State<LifterApp> {
     // el cuestionario aparecería un instante a quien ya lo completó.
     if (!_store.profileLoaded) return const _LoadingScreen();
     if (!user.onboardingCompleted) return const OnboardingScreen();
-    return const MainShell();
+    // Los entrenadores eligen el modo con el selector "Usuario | Entrenador".
+    return _store.inTrainerMode ? const TrainerShell() : const MainShell();
   }
 }
 

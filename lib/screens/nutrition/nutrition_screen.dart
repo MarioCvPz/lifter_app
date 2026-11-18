@@ -4,6 +4,7 @@ import '../../data/app_store.dart';
 import '../../data/stats.dart';
 import '../../models/models.dart';
 import '../../widgets/brand.dart';
+import '../../widgets/coach_badge.dart';
 import '../../widgets/help.dart';
 import 'food_catalog_screen.dart';
 import 'food_category_icon.dart';
@@ -76,6 +77,16 @@ class _NutritionScreenState extends State<NutritionScreen> {
             macros: store.macrosFor(_day),
             targets: store.macroTargets(),
           ),
+          if (store.nutritionByCoach) ...[
+            const SizedBox(height: 8),
+            CoachBadge(
+              label: store.coachLabel,
+              // Sin entrenador, el usuario puede volver a sus cálculos.
+              onReset: store.hasAcceptedTrainer
+                  ? null
+                  : store.resetMyCoachSettings,
+            ),
+          ],
           const SizedBox(height: 20),
           _LogsHeader(isToday: _isToday, count: logs.length),
           const SizedBox(height: 8),

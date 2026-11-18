@@ -32,9 +32,14 @@ extension AppStoreStats on AppStore {
   /// cuestionario aún sin guardar) y, si no, el perfil de la sesión.
   /// Sin ninguno de los dos (sin sesión) usa un perfil con los valores por
   /// defecto, para que las pantallas siempre tengan un objetivo.
+  /// Con el perfil de la sesión, si el entrenador ha fijado objetivos
+  /// ([coachSettings]), se usan esos (ver
+  /// [NutritionCalculator.macrosWithCoach]).
   DailyMacros macroTargets([UserProfile? profile]) {
     final p = profile ?? user ?? UserProfile(name: '', username: '', email: '');
-    return NutritionCalculator.macros(p);
+    // Las respuestas del cuestionario ([profile]) no llevan entrenador.
+    final coach = profile == null ? coachSettings : null;
+    return NutritionCalculator.macrosWithCoach(p, coach);
   }
 
   DateTime get _monday {
@@ -163,17 +168,41 @@ extension AppStoreStats on AppStore {
   }
 
   /// Veces que ha hecho el ejercicio, de la más reciente a la más antigua
-  /// (como mucho [limit]). Cada una con la fecha del entreno y lo que hizo.
-  List<({DateTime date, WorkoutExercise entry})> historyOf(
+  /// (como mucho [limit]). Cada una con la fecha del entreno, lo que hizo
+  /// y la respuesta de su entrenador a su comentario (si la hay).
+  List<({DateTime date, WorkoutExercise entry, String? coachReply})> historyOf(
     String exerciseId, {
     int limit = 10,
   }) {
     final history = [
       for (final w in workouts)
-        for (final e in w.exercises)
-          if (e.exercise.id == exerciseId) (date: w.date, entry: e),
+        for (final (i, e) in w.exercises.indexed)
+          if (e.exercise.id == exerciseId)
+            (date: w.date, entry: e, coachReply: coachReplyFor(w.id, i)),
     ]..sort((a, b) => b.date.compareTo(a.date));
     return history.take(limit).toList();
+  }
+
+  /// Respuesta de mi entrenador a mi comentario del ejercicio
+  /// [exerciseIndex] del entreno [workoutId], o null. Como las notas del
+  /// plan, solo se ve mientras tengo entrenador.
+  String? coachReplyFor(String workoutId, int exerciseIndex) {
+    if (!hasAcceptedTrainer) return null;
+    return coachReplies[CoachReply.idFor(workoutId, exerciseIndex)]?.reply;
+  }
+
+  /// La última respuesta de mi entrenador a un comentario mío en
+  /// [exerciseId], para la tarjeta del entreno en directo, o null.
+  String? latestCoachReplyFor(String exerciseId) {
+    // `workouts` va del más reciente al más antiguo.
+    for (final w in workouts) {
+      for (final (i, e) in w.exercises.indexed) {
+        if (e.exercise.id != exerciseId) continue;
+        final reply = coachReplyFor(w.id, i);
+        if (reply != null) return reply;
+      }
+    }
+    return null;
   }
 
   /// Propuestas para "Sustituir": ejercicios del catálogo con el mismo
@@ -227,18 +256,36 @@ extension AppStoreStats on AppStore {
     return null;
   }
 
+  /// Rutina del entrenador para ese día de la semana (1 = lunes), o null
+  /// si no tiene ninguna o es día de descanso. Las asignaciones van por
+  /// orden de día del plan ([AssignedRoutine.dayNumber]): si entrena lunes,
+  /// miércoles y viernes, el miércoles es el día 2. Las antiguas, sin día,
+  /// valen para todos. Si hay varias para el mismo día, gana la más nueva.
+  AssignedRoutine? assignedFor(int weekday) {
+    final days = plan?.days ?? const <PlanDay>[];
+    // Posición del día en el plan (los días están ordenados de lunes a
+    // domingo); -1 si ese día descansa.
+    final position = days.indexWhere((d) => d.weekday == weekday);
+    if (position == -1) return null;
+    final dayNumber = position + 1;
+    // La lista está ordenada de la más nueva a la más antigua.
+    for (final a in assignedToMe) {
+      if (a.dayNumber == null || a.dayNumber == dayNumber) return a;
+    }
+    return null;
+  }
+
   /// Entreno de ese día de la semana (1 = lunes) para Inicio, o null si
   /// en el plan es día de descanso. Orden de prioridad:
-  /// 1. Si el entrenador le ha asignado alguna rutina, la última (las
-  ///    asignaciones no tienen día, así que va en todos los días de
-  ///    entreno).
+  /// 1. Si el entrenador le ha asignado una rutina para ese día, esa (ver
+  ///    [assignedFor]).
   /// 2. Si no, el día del plan.
   DayWorkout? workoutFor(int weekday) {
     final day = plan?.dayFor(weekday);
     if (day == null) return null;
-    if (assignedToMe.isNotEmpty) {
-      // La lista está ordenada de la más nueva a la más antigua.
-      final routine = assignedToMe.first.routine;
+    final assigned = assignedFor(weekday);
+    if (assigned != null) {
+      final routine = assigned.routine;
       return DayWorkout(
         weekday: weekday,
         name: routine.name,
@@ -317,9 +364,22 @@ extension AppStoreStats on AppStore {
   );
 
   /// Objetivo de pasos que se usa en Progreso. Es el único sitio que lo
-  /// decide: ahora es el del perfil del usuario; cuando el entrenador pueda
-  /// poner uno (prompt 7), irá aquí delante y tendrá prioridad.
-  int get stepsGoalInUse => user?.stepsGoal ?? UserProfile.defaultStepsGoal;
+  /// decide: primero el que puso el entrenador y, si no hay, el del perfil.
+  int get stepsGoalInUse =>
+      coachSettings?.stepsGoal ??
+      user?.stepsGoal ??
+      UserProfile.defaultStepsGoal;
+
+  /// True si las calorías las ha fijado un entrenador.
+  bool get nutritionByCoach => coachSettings?.adjustsNutrition ?? false;
+
+  /// True si el objetivo de pasos lo ha fijado un entrenador.
+  bool get stepsByCoach => coachSettings?.stepsGoal != null;
+
+  /// Texto de la etiqueta que acompaña a lo que ajustó el entrenador.
+  String get coachLabel => hasAcceptedTrainer
+      ? 'Ajustado por tu entrenador'
+      : 'Ajustado por tu entrenador anterior';
 
   /// Peso apuntado ese día, o null. Rellena la hoja de "+ Peso".
   WeightEntry? weightOn(DateTime day) {

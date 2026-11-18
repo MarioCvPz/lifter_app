@@ -9,7 +9,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
 import 'auth_service.dart';
 import 'catalog.dart';
+import 'client_overview.dart';
 import 'routine_generator.dart';
+import 'trainer_link.dart';
 
 /// Estado de la app. La sesión va con Firebase Auth y los datos de cada
 /// usuario se guardan en Firestore bajo `users/{uid}`:
@@ -20,6 +22,12 @@ import 'routine_generator.dart';
 ///   - `users/{uid}/plan/current` → plan de entrenamiento generado
 ///   - `users/{uid}/weights`, `users/{uid}/steps` → peso y pasos, un
 ///     documento por día ([dayKey])
+///   - `users/{uid}/coach/settings` → objetivos que pone su entrenador
+///   - `users/{uid}/coachReplies` → notas leídas y respondidas por su
+///     entrenador ([CoachReply])
+/// Entrenadores y clientes:
+///   - `trainerCodes/{code}` → código de cada entrenador
+///   - `trainerLinks/{clientId}` → solicitud o vínculo de cada cliente
 /// El catálogo es común a todos y también está en Firestore:
 ///   - `exercises`, `foods`, `routineTemplates` (solo los admins lo editan)
 /// Los datos calculados (rachas, macros…) están en stats.dart.
@@ -69,6 +77,32 @@ class AppStore extends ChangeNotifier {
   final List<WeightEntry> weights = [];
   final List<StepsEntry> steps = [];
 
+  /// Mi vínculo con un entrenador (`trainerLinks/{miUid}`), o null si no
+  /// tengo ni he enviado ninguna solicitud.
+  TrainerLink? myTrainerLink;
+
+  /// Objetivos que me ha puesto un entrenador, o null si no hay. Se siguen
+  /// usando aunque me desvincule, hasta que pulse "Volver al automático".
+  CoachSettings? coachSettings;
+
+  /// Como entrenador: solicitudes y clientes (`trainerLinks` con mi uid).
+  final List<TrainerLink> trainerLinks = [];
+
+  /// Lo que mi entrenador ha hecho con mis notas (leídas y respuestas),
+  /// por id de nota ([CoachReply.idFor]).
+  final Map<String, CoachReply> coachReplies = {};
+
+  /// Modo entrenador: datos de mis clientes para la lista "Mis clientes" y
+  /// la pestaña Notas. No se escuchan en tiempo real (serían muchas
+  /// lecturas): se cargan con [loadClientOverviews].
+  List<ClientOverview> clientOverviews = [];
+  bool clientsLoading = false;
+  String? clientsError;
+
+  /// Clientes con los que se cargó [clientOverviews], o null si aún no se
+  /// ha cargado nada.
+  Set<String>? _overviewsFor;
+
   /// Tema elegido (oscuro por defecto). Se guarda en el propio dispositivo
   /// con shared_preferences y no en Firestore, porque es una preferencia
   /// del dispositivo y así también se aplica en la pantalla de login.
@@ -76,6 +110,13 @@ class AppStore extends ChangeNotifier {
 
   /// Clave con la que se guarda el tema en shared_preferences.
   static const themeKey = 'themeMode';
+
+  /// Modo que eligió un entrenador ("Usuario" o "Entrenador"). Se guarda
+  /// en el dispositivo, como el tema, para arrancar en el último usado.
+  bool _trainerModeChosen = false;
+
+  /// Clave con la que se guarda el modo en shared_preferences.
+  static const trainerModeKey = 'trainerMode';
 
   String? get currentUid => _auth.currentUser?.uid;
 
@@ -91,9 +132,15 @@ class AppStore extends ChangeNotifier {
   bool get isAdmin => role == UserRole.admin;
   bool get isTrainer => role == UserRole.trainer || role == UserRole.admin;
 
+  /// True si la app está en modo entrenador. Quien no es entrenador (o
+  /// deja de serlo) siempre está en modo usuario, aunque lo tenga guardado.
+  bool get inTrainerMode => isTrainer && _trainerModeChosen;
+
   StreamSubscription<User?>? _authSub;
   final List<StreamSubscription<Object?>> _dataSubs = [];
-  StreamSubscription<Object?>? _trainerSub;
+
+  /// Escuchas que solo tienen los entrenadores.
+  final List<StreamSubscription<Object?>> _trainerSubs = [];
 
   FirebaseAuth get _auth => FirebaseAuth.instance;
   FirebaseFirestore get _db => FirebaseFirestore.instance;
@@ -118,6 +165,13 @@ class AppStore extends ChangeNotifier {
     waterMl = 0;
     weights.clear();
     steps.clear();
+    myTrainerLink = null;
+    coachSettings = null;
+    trainerLinks.clear();
+    coachReplies.clear();
+    clientOverviews = [];
+    clientsError = null;
+    _overviewsFor = null;
     plan = null;
     profileLoaded = false;
 
@@ -256,6 +310,24 @@ class AppStore extends ChangeNotifier {
               ..addAll(snap.docs.map((d) => StepsEntry.fromMap(d.data())));
             notifyListeners();
           }, onError: _onError),
+      _linkDoc(uid).snapshots().listen((snap) {
+        final data = snap.data();
+        myTrainerLink = data == null ? null : TrainerLink.fromMap(data);
+        notifyListeners();
+      }, onError: _onError),
+      _coachDoc(uid).snapshots().listen((snap) {
+        final data = snap.data();
+        coachSettings = data == null ? null : CoachSettings.fromMap(data);
+        notifyListeners();
+      }, onError: _onError),
+      _repliesOf(uid).snapshots().listen((snap) {
+        coachReplies
+          ..clear()
+          ..addEntries(
+            snap.docs.map((d) => MapEntry(d.id, CoachReply.fromMap(d.data()))),
+          );
+        notifyListeners();
+      }, onError: _onError),
       userDoc
           .collection('nutrition')
           .orderBy('date', descending: true)
@@ -271,27 +343,49 @@ class AppStore extends ChangeNotifier {
     ]);
   }
 
-  /// Escucha las rutinas asignadas por mí solo mientras sea entrenador.
+  /// Escucha mis rutinas asignadas y mis solicitudes y clientes solo
+  /// mientras sea entrenador (el rol puede cambiar en cualquier momento).
   void _updateTrainerSub(String uid) {
     if (!isTrainer) {
-      _trainerSub?.cancel();
-      _trainerSub = null;
+      _cancelTrainerSubs();
       assignedByMe.clear();
+      trainerLinks.clear();
       return;
     }
-    _trainerSub ??= _db
-        .collection('assignedRoutines')
-        .where('trainerId', isEqualTo: uid)
-        .snapshots()
-        .listen((snap) {
-          assignedByMe
-            ..clear()
-            ..addAll(
-              snap.docs.map((d) => AssignedRoutine.fromMap(d.id, d.data())),
-            )
-            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          notifyListeners();
-        }, onError: _onError);
+    if (_trainerSubs.isNotEmpty) return;
+    _trainerSubs.addAll([
+      _db
+          .collection('assignedRoutines')
+          .where('trainerId', isEqualTo: uid)
+          .snapshots()
+          .listen((snap) {
+            assignedByMe
+              ..clear()
+              ..addAll(
+                snap.docs.map((d) => AssignedRoutine.fromMap(d.id, d.data())),
+              )
+              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            notifyListeners();
+          }, onError: _onError),
+      _db
+          .collection('trainerLinks')
+          .where('trainerId', isEqualTo: uid)
+          .snapshots()
+          .listen((snap) {
+            trainerLinks
+              ..clear()
+              ..addAll(snap.docs.map((d) => TrainerLink.fromMap(d.data())))
+              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            notifyListeners();
+          }, onError: _onError),
+    ]);
+  }
+
+  void _cancelTrainerSubs() {
+    for (final sub in _trainerSubs) {
+      sub.cancel();
+    }
+    _trainerSubs.clear();
   }
 
   void _cancelDataSubs() {
@@ -299,8 +393,7 @@ class AppStore extends ChangeNotifier {
       sub.cancel();
     }
     _dataSubs.clear();
-    _trainerSub?.cancel();
-    _trainerSub = null;
+    _cancelTrainerSubs();
   }
 
   @override
@@ -350,8 +443,12 @@ class AppStore extends ChangeNotifier {
         warnings: const <String>[],
       );
     }
+    final stepsChanged = user?.stepsGoal != next.stepsGoal;
     user = next;
     if (update != null) plan = update.plan;
+    // Sin entrenador, si cambia su objetivo de pasos deja de usarse el que
+    // le puso el entrenador anterior.
+    if (stepsChanged) _clearCoachStepsGoal();
     notifyListeners();
     return (error: null, warnings: update?.warnings ?? const <String>[]);
   }
@@ -509,8 +606,18 @@ class AppStore extends ChangeNotifier {
     }
   }
 
-  void assignRoutine(AppUser to, Routine routine) {
-    final doc = _db.collection('assignedRoutines').doc();
+  /// Asigna [routine] al día [dayNumber] del plan de [to] (1 = su primer
+  /// día de entreno). Solo hay una rutina por día: si ya le había asignado
+  /// otra a ese día, se borra en el mismo lote para no dejar restos.
+  void assignRoutine(AppUser to, Routine routine, {required int dayNumber}) {
+    final assignedRoutines = _db.collection('assignedRoutines');
+    final batch = _db.batch();
+    for (final old in assignedByMe) {
+      if (old.userId == to.uid && old.dayNumber == dayNumber) {
+        batch.delete(assignedRoutines.doc(old.id));
+      }
+    }
+    final doc = assignedRoutines.doc();
     final assigned = AssignedRoutine(
       id: doc.id,
       routine: routine,
@@ -519,14 +626,374 @@ class AppStore extends ChangeNotifier {
       userId: to.uid,
       userName: to.profile.name,
       createdAt: DateTime.now(),
+      dayNumber: dayNumber,
     );
-    _save(doc.set(assigned.toMap()));
+    batch.set(doc, assigned.toMap());
+    _save(batch.commit());
   }
 
   void deleteAssignedRoutine(String id) {
     assignedByMe.removeWhere((r) => r.id == id);
     notifyListeners();
     _save(_db.collection('assignedRoutines').doc(id).delete());
+  }
+
+  // --- Entrenador: lado del cliente ("Mi entrenador", en Perfil) ---
+
+  /// Lo que ve el cliente: sin entrenador, solicitud pendiente o vinculado.
+  MyTrainerState get myTrainerState => TrainerLinkRules.stateOf(myTrainerLink);
+
+  /// True si un entrenador ha aceptado mi solicitud. Solo entonces se ven
+  /// sus notas en los ejercicios.
+  bool get hasAcceptedTrainer => myTrainerLink?.isAccepted ?? false;
+
+  /// Envía una solicitud al entrenador de [text] (el código que ha escrito
+  /// el usuario). Espera a Firestore para poder decir si el código no
+  /// existe. Devuelve el mensaje de error, o null si se envió.
+  Future<String?> sendTrainerRequest(String text) async {
+    final code = TrainerCode.normalize(text);
+    final error = TrainerLinkRules.validateRequest(
+      code: code,
+      current: myTrainerLink,
+    );
+    if (error != null) return error;
+    final uid = _sessionUid;
+    if (uid == null) return 'No hay sesión.';
+    try {
+      final data = (await _codeDoc(code).get()).data();
+      if (data == null) return TrainerLinkRules.codeNotFound;
+      final trainerId = data['trainerId'] as String? ?? '';
+      if (trainerId == uid) return TrainerLinkRules.ownCode;
+      final link = TrainerLinkRules.newRequest(
+        clientId: uid,
+        clientName: user?.name ?? '',
+        trainerId: trainerId,
+        trainerName: data['trainerName'] as String? ?? 'Entrenador',
+        code: code,
+      );
+      await _linkDoc(uid).set(link.toMap());
+      myTrainerLink = link;
+      notifyListeners();
+      return null;
+    } on FirebaseException catch (e) {
+      return 'No se pudo enviar la solicitud: ${e.message ?? e.code}';
+    }
+  }
+
+  /// Cancela mi solicitud o me desvinculo de mi entrenador. Lo que me puso
+  /// (objetivos y ejercicios) se queda; sus notas dejan de verse.
+  void leaveTrainer() {
+    myTrainerLink = null;
+    notifyListeners();
+    final uid = _sessionUid;
+    if (uid == null) return;
+    _save(_linkDoc(uid).delete());
+  }
+
+  /// "Volver al automático": deja de usar los objetivos que puso un
+  /// entrenador. Solo si ya no tengo entrenador (mientras lo tengo, los
+  /// cambia él; las reglas tampoco lo permiten).
+  void resetMyCoachSettings() {
+    if (hasAcceptedTrainer) return;
+    coachSettings = null;
+    notifyListeners();
+    final uid = _sessionUid;
+    if (uid == null) return;
+    _save(_coachDoc(uid).delete());
+  }
+
+  /// Quita solo el objetivo de pasos del entrenador (cuando ya no tengo
+  /// entrenador y pongo el mío en Ajustes).
+  void _clearCoachStepsGoal() {
+    final coach = coachSettings;
+    if (hasAcceptedTrainer || coach == null || coach.stepsGoal == null) return;
+    final next = CoachSettings(kcalTarget: coach.kcalTarget);
+    if (next.isEmpty) {
+      resetMyCoachSettings();
+      return;
+    }
+    coachSettings = next;
+    final uid = _sessionUid;
+    if (uid == null) return;
+    _save(_coachDoc(uid).set(next.toMap()));
+  }
+
+  // --- Entrenador: código, solicitudes y clientes ---
+
+  /// Intentos para encontrar un código libre. Con mil millones de códigos
+  /// posibles, casi siempre vale el primero.
+  static const _codeAttempts = 5;
+
+  /// Crea mi código si aún no tengo ninguno (al abrir "Mi código").
+  Future<String?> ensureTrainerCode() async {
+    if (user?.trainerCode != null) return null;
+    return _newTrainerCode();
+  }
+
+  /// "Generar otro": el código anterior deja de valer. Los clientes ya
+  /// vinculados no cambian, porque su vínculo no depende del código.
+  Future<String?> regenerateTrainerCode() =>
+      _newTrainerCode(old: user?.trainerCode);
+
+  /// Crea un código nuevo y lo guarda en mi perfil, todo en un WriteBatch.
+  /// Si el código ya es de otro, las reglas rechazan crearlo (sería
+  /// modificar un documento ajeno) y se prueba con otro.
+  Future<String?> _newTrainerCode({String? old}) async {
+    final uid = _sessionUid;
+    final profile = user;
+    if (uid == null || profile == null) return 'No hay sesión.';
+    if (!isTrainer) return 'Solo los entrenadores tienen código.';
+    try {
+      // Si el antiguo ya no existe, no se puede borrar (las reglas miran
+      // de quién es); por eso se comprueba antes.
+      final oldToDelete = old != null && (await _codeDoc(old).get()).exists
+          ? old
+          : null;
+      for (var i = 0; i < _codeAttempts; i++) {
+        final code = TrainerCode.generate();
+        final batch = _db.batch()
+          ..set(_codeDoc(code), {
+            'trainerId': uid,
+            'trainerName': profile.name,
+            'createdAt': Timestamp.now(),
+          })
+          ..update(_userDoc(uid), {'trainerCode': code});
+        if (oldToDelete != null) batch.delete(_codeDoc(oldToDelete));
+        try {
+          await batch.commit();
+          profile.trainerCode = code;
+          notifyListeners();
+          return null;
+        } on FirebaseException catch (e) {
+          if (e.code != 'permission-denied') rethrow;
+        }
+      }
+      return 'No se pudo crear el código. Inténtalo de nuevo.';
+    } on FirebaseException catch (e) {
+      return 'No se pudo crear el código: ${e.message ?? e.code}';
+    }
+  }
+
+  /// Acepta la solicitud de [clientId]: pasa a ser mi cliente.
+  void acceptRequest(String clientId) {
+    final index = trainerLinks.indexWhere((l) => l.clientId == clientId);
+    if (index == -1) return;
+    trainerLinks[index] = trainerLinks[index].accept();
+    notifyListeners();
+    if (_sessionUid == null) return;
+    _save(_linkDoc(clientId).update({'status': LinkStatus.accepted.name}));
+  }
+
+  /// Rechaza la solicitud de [clientId] o lo desvincula si ya era cliente.
+  void removeClientLink(String clientId) {
+    trainerLinks.removeWhere((l) => l.clientId == clientId);
+    notifyListeners();
+    if (_sessionUid == null) return;
+    _save(_linkDoc(clientId).delete());
+  }
+
+  /// Perfiles de mis clientes, ordenados por nombre. Se leen uno a uno:
+  /// las reglas ya no dejan a un entrenador listar todos los usuarios.
+  Future<List<AppUser>> fetchClients() async {
+    final docs = await Future.wait([
+      for (final id in myClientIds) _userDoc(id).get(),
+    ]);
+    final clients = [
+      for (final d in docs)
+        if (d.data() case final data?)
+          AppUser(uid: d.id, profile: UserProfile.fromMap(data)),
+    ];
+    clients.sort(
+      (a, b) =>
+          a.profile.name.toLowerCase().compareTo(b.profile.name.toLowerCase()),
+    );
+    return clients;
+  }
+
+  /// Plan de un cliente, o null si aún no tiene.
+  Future<TrainingPlan?> fetchPlanOf(String uid) async {
+    final data = (await _planDoc(uid).get()).data();
+    return data == null ? null : TrainingPlan.fromMap(data);
+  }
+
+  /// Objetivos que he puesto a un cliente (vacío si ninguno).
+  Future<CoachSettings> fetchCoachSettingsOf(String uid) async {
+    final data = (await _coachDoc(uid).get()).data();
+    return data == null ? const CoachSettings() : CoachSettings.fromMap(data);
+  }
+
+  /// Guarda el plan de un cliente. Espera a Firestore para avisar si falla.
+  Future<String?> saveClientPlan(String uid, TrainingPlan clientPlan) =>
+      _trainerWrite(() => _planDoc(uid).set(clientPlan.toMap()));
+
+  /// Guarda los objetivos de un cliente. Si todo vuelve al automático, se
+  /// borra el documento. Devuelve el error, o null.
+  Future<String?> saveClientCoachSettings(
+    String uid,
+    CoachSettings settings,
+  ) async {
+    final error = settings.validate();
+    if (error != null) return error;
+    return _trainerWrite(
+      () => settings.isEmpty
+          ? _coachDoc(uid).delete()
+          : _coachDoc(uid).set(settings.toMap()),
+    );
+  }
+
+  // --- Modo entrenador: lista de clientes y notas ---
+
+  /// True si [clientOverviews] no es de los clientes que tengo ahora (por
+  /// ejemplo, porque acabo de aceptar una solicitud) o aún no se ha cargado.
+  bool get clientOverviewsOutdated {
+    final loaded = _overviewsFor;
+    final ids = myClientIds;
+    return loaded == null ||
+        loaded.length != ids.length ||
+        !loaded.containsAll(ids);
+  }
+
+  /// Notas de mis clientes que aún no he leído (el globo de "Notas").
+  int get unreadClientNotes =>
+      clientOverviews.fold(0, (total, c) => total + c.unreadNotes);
+
+  /// Carga los datos de la semana de cada cliente (ver [ClientOverview]).
+  /// Se llama al abrir el modo entrenador y al tirar hacia abajo.
+  Future<void> loadClientOverviews() async {
+    if (_sessionUid == null) return; // en los tests no hay Firebase
+    _overviewsFor = myClientIds;
+    clientsLoading = true;
+    clientsError = null;
+    notifyListeners();
+    try {
+      final today = DateTime.now();
+      final clients = await fetchClients();
+      clientOverviews = await Future.wait([
+        for (final c in clients) _fetchOverview(c, today),
+      ]);
+    } on FirebaseException catch (e) {
+      clientsError =
+          'No se pudieron cargar tus clientes: ${e.message ?? e.code}';
+    }
+    clientsLoading = false;
+    notifyListeners();
+  }
+
+  /// Lee a la vez los datos de un cliente que necesita [ClientOverview].
+  Future<ClientOverview> _fetchOverview(AppUser client, DateTime today) async {
+    final doc = _userDoc(client.uid);
+    Future<QuerySnapshot<Map<String, dynamic>>> since(
+      String collection,
+      DateTime from,
+    ) => doc
+        .collection(collection)
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(from))
+        .orderBy('date', descending: true)
+        .get();
+
+    final workoutsFrom = ClientOverview.workoutsFrom(today);
+    final othersFrom = ClientOverview.othersFrom(today);
+    // `.wait` lanza todas las lecturas a la vez y espera a que acaben
+    // (como lanzar varios hilos en Java y esperarlos con join).
+    final (plan, coach, workouts, nutrition, weights, steps, replies) = await (
+      fetchPlanOf(client.uid),
+      fetchCoachSettingsOf(client.uid),
+      since('workouts', workoutsFrom),
+      since('nutrition', othersFrom),
+      since('weights', othersFrom),
+      since('steps', othersFrom),
+      _repliesOf(client.uid).get(),
+    ).wait;
+    return ClientOverview(
+      user: client,
+      today: today,
+      plan: plan,
+      coach: coach,
+      workouts: [
+        for (final d in workouts.docs) Workout.fromMap(d.id, d.data()),
+      ],
+      nutrition: [
+        for (final d in nutrition.docs) NutritionEntry.fromMap(d.id, d.data()),
+      ],
+      weights: [for (final d in weights.docs) WeightEntry.fromMap(d.data())],
+      steps: [for (final d in steps.docs) StepsEntry.fromMap(d.data())],
+      replies: {
+        for (final d in replies.docs) d.id: CoachReply.fromMap(d.data()),
+      },
+    );
+  }
+
+  /// Datos cargados de un cliente, o null si no está en la lista.
+  ClientOverview? overviewOf(String clientId) {
+    for (final c in clientOverviews) {
+      if (c.uid == clientId) return c;
+    }
+    return null;
+  }
+
+  /// Pone [changed] en las respuestas del cliente [clientId] (en local).
+  void _updateReplies(String clientId, List<CoachReply> changed) {
+    clientOverviews = [
+      for (final c in clientOverviews)
+        c.uid == clientId ? c.withReplies(changed) : c,
+    ];
+    notifyListeners();
+  }
+
+  /// Responde a una nota (y la marca como leída). El cliente ve la
+  /// respuesta en el historial del ejercicio y en su tarjeta del entreno.
+  /// Devuelve el error, o null.
+  Future<String?> replyToNote(ClientNote note, String text) async {
+    final error = CoachReply.validate(text);
+    if (error != null) return error;
+    final reply = _replyFor(note).copyWith(
+      reply: text.trim(),
+      readAt: note.reply?.readAt ?? DateTime.now(),
+    );
+    _updateReplies(note.clientId, [reply]);
+    if (_sessionUid == null) return null; // en los tests no hay Firebase
+    return _trainerWrite(
+      () => _repliesOf(note.clientId).doc(reply.id).set(reply.toMap()),
+    );
+  }
+
+  /// Marca como leídas todas las notas de un cliente (al abrir la pestaña
+  /// Notas de su ficha). Se escriben todas en un lote.
+  void markNotesRead(String clientId) {
+    final unread = [
+      for (final n in overviewOf(clientId)?.notes ?? const <ClientNote>[])
+        if (!n.isRead) n,
+    ];
+    if (unread.isEmpty) return;
+    final now = DateTime.now();
+    final changed = [
+      for (final n in unread) _replyFor(n).copyWith(readAt: now),
+    ];
+    _updateReplies(clientId, changed);
+    if (_sessionUid == null) return;
+    final batch = _db.batch();
+    for (final r in changed) {
+      batch.set(_repliesOf(clientId).doc(r.id), r.toMap());
+    }
+    _save(batch.commit());
+  }
+
+  /// La respuesta que ya tiene la nota o una nueva vacía.
+  static CoachReply _replyFor(ClientNote note) =>
+      note.reply ??
+      CoachReply(
+        workoutId: note.workoutId,
+        exerciseIndex: note.exerciseIndex,
+        exerciseId: note.exercise.id,
+      );
+
+  Future<String?> _trainerWrite(Future<void> Function() write) async {
+    try {
+      await write();
+      return null;
+    } on FirebaseException catch (e) {
+      return 'No se pudo guardar: ${e.message ?? e.code}';
+    }
   }
 
   void addNutrition(NutritionEntry entry) {
@@ -667,6 +1134,29 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(themeKey, mode.name);
+  }
+
+  // --- Modo usuario / entrenador ---
+
+  /// Lee el modo guardado en el dispositivo. Se llama al arrancar la app.
+  /// Si no hay nada guardado (o no se puede leer), modo usuario.
+  Future<void> loadTrainerMode() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _trainerModeChosen = prefs.getBool(trainerModeKey) ?? false;
+      notifyListeners();
+    } on Exception {
+      // Sin acceso al almacenamiento local: se queda en modo usuario.
+    }
+  }
+
+  /// Cambia de modo al momento y lo guarda para la próxima vez. Solo los
+  /// entrenadores pueden pasar a modo entrenador.
+  Future<void> setTrainerMode(bool on) async {
+    _trainerModeChosen = on && isTrainer;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(trainerModeKey, _trainerModeChosen);
   }
 
   // --- Catálogo (solo admins; lo comprueban las reglas) ---
@@ -831,7 +1321,8 @@ class AppStore extends ChangeNotifier {
 
   // --- Lecturas para los paneles de entrenador y admin ---
 
-  /// Entrenos de otro usuario. Las reglas lo permiten a entrenadores y admins.
+  /// Entrenos de otro usuario. Las reglas lo permiten a su entrenador y a
+  /// los admins.
   Future<List<Workout>> fetchWorkoutsOf(String uid) async {
     final snap = await _userDoc(
       uid,
@@ -851,11 +1342,36 @@ class AppStore extends ChangeNotifier {
     return byUser;
   }
 
-  /// Usuarios a los que he asignado alguna rutina (mis clientes).
-  Set<String> get myClientIds => {for (final a in assignedByMe) a.userId};
+  /// Mis clientes: los vínculos que he aceptado.
+  List<TrainerLink> get clientLinks => [
+    for (final l in trainerLinks)
+      if (l.isAccepted) l,
+  ];
+
+  /// Solicitudes que aún no he aceptado ni rechazado.
+  List<TrainerLink> get pendingRequests => [
+    for (final l in trainerLinks)
+      if (l.isPending) l,
+  ];
+
+  /// Uids de mis clientes (vinculados). Antes eran "a quien asigné una
+  /// rutina"; ahora hace falta que el cliente lo pida y yo lo acepte.
+  Set<String> get myClientIds => {for (final l in clientLinks) l.clientId};
 
   DocumentReference<Map<String, dynamic>> _waterDoc(String uid, DateTime day) =>
       _userDoc(uid).collection('water').doc(dayKey(day));
+
+  DocumentReference<Map<String, dynamic>> _linkDoc(String clientId) =>
+      _db.collection('trainerLinks').doc(clientId);
+
+  DocumentReference<Map<String, dynamic>> _codeDoc(String code) =>
+      _db.collection('trainerCodes').doc(code);
+
+  DocumentReference<Map<String, dynamic>> _coachDoc(String uid) =>
+      _userDoc(uid).collection('coach').doc('settings');
+
+  CollectionReference<Map<String, dynamic>> _repliesOf(String uid) =>
+      _userDoc(uid).collection('coachReplies');
 
   DocumentReference<Map<String, dynamic>> _planDoc(String uid) =>
       _userDoc(uid).collection('plan').doc('current');

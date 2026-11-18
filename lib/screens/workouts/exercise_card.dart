@@ -27,7 +27,17 @@ class ExerciseCard extends StatelessWidget {
     required this.onMenu,
     required this.isFirst,
     required this.isLast,
+    this.trainerNote,
+    this.coachReply,
   });
+
+  /// Nota del entrenador que se muestra, o null (no hay, o el usuario ya
+  /// no tiene entrenador).
+  final String? trainerNote;
+
+  /// Última respuesta del entrenador a un comentario de este ejercicio, o
+  /// null. Se muestra igual que la nota, con "Tu entrenador:".
+  final String? coachReply;
 
   /// Posición en el entreno (1, 2, 3…).
   final int number;
@@ -62,6 +72,9 @@ class ExerciseCard extends StatelessWidget {
           children: [
             _CardTitle(number: number, name: item.exercise.name, menu: _menu()),
             _TargetTags(item),
+            if (trainerNote case final note?) TrainerNoteBox(note),
+            if (coachReply case final reply?)
+              TrainerNoteBox(reply, prefix: 'Tu entrenador: '),
             if (item.comment.isNotEmpty) _Comment(item.comment),
             const SizedBox(height: 8),
             const _SetsHeader(),
@@ -164,6 +177,62 @@ class _CardTitle extends StatelessWidget {
         ),
         menu,
       ],
+    );
+  }
+}
+
+/// "Nota de tu entrenador" (o el [prefix] que se pase, como "Tu
+/// entrenador:" en sus respuestas) en un recuadro con el color secundario
+/// del tema.
+class TrainerNoteBox extends StatelessWidget {
+  const TrainerNoteBox(
+    this.text, {
+    super.key,
+    this.prefix = 'Nota de tu entrenador: ',
+  });
+
+  final String text;
+  final String prefix;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 8, right: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: scheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.sports_outlined,
+            size: 18,
+            color: scheme.onSecondaryContainer,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: prefix,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  TextSpan(text: text),
+                ],
+              ),
+              style: textTheme.bodySmall?.copyWith(
+                color: scheme.onSecondaryContainer,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

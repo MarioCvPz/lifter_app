@@ -5,6 +5,7 @@ import '../../data/client_report.dart';
 import '../../data/stats.dart';
 import '../../data/workout_draft.dart';
 import '../../models/models.dart';
+import 'exercise_card.dart';
 
 /// Abre la hoja del ejercicio con dos pestañas: "Cómo hacerlo" y
 /// "Historial". [showHistory] abre directamente la segunda (botón
@@ -118,7 +119,14 @@ class _History extends StatelessWidget {
           ListTile(
             contentPadding: EdgeInsets.zero,
             title: Text(longDate(item.date)),
-            subtitle: Text(_describe(item.entry)),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_describe(item.entry)),
+                if (item.coachReply case final reply?)
+                  TrainerNoteBox(reply, prefix: 'Tu entrenador: '),
+              ],
+            ),
           ),
       ],
     );

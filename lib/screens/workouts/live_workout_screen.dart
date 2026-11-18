@@ -328,6 +328,14 @@ class _LiveWorkoutScreenState extends State<LiveWorkoutScreen> {
       onMenu: (action) => _onExerciseMenu(index, action),
       isFirst: index == 0,
       isLast: index == _draft.exercises.length - 1,
+      // Las notas solo se ven mientras tiene entrenador.
+      trainerNote: SessionScope.of(context).hasAcceptedTrainer
+          ? item.trainerNote
+          : null,
+      // Ya devuelve null si no tiene entrenador.
+      coachReply: SessionScope.of(
+        context,
+      ).latestCoachReplyFor(item.exercise.id),
     );
   }
 

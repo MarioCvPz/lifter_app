@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/app_theme.dart';
+import '../../widgets/pill_nav_bar.dart';
 import '../home/home_screen.dart';
 import '../nutrition/nutrition_screen.dart';
 import '../profile/profile_screen.dart';
@@ -37,104 +37,41 @@ class _MainShellState extends State<MainShell> {
   void _select(int index) => setState(() => _index = index);
 
   static const _items = [
-    (Icons.home_outlined, Icons.home, 'Inicio'),
-    (Icons.fitness_center_outlined, Icons.fitness_center, 'Entrenos'),
-    (Icons.bar_chart_outlined, Icons.bar_chart, 'Progreso'),
-    (Icons.restaurant_outlined, Icons.restaurant, 'Nutrición'),
-    (Icons.person_outline, Icons.person, 'Perfil'),
+    PillNavItem(
+      icon: Icons.home_outlined,
+      selectedIcon: Icons.home,
+      label: 'Inicio',
+    ),
+    PillNavItem(
+      icon: Icons.fitness_center_outlined,
+      selectedIcon: Icons.fitness_center,
+      label: 'Entrenos',
+    ),
+    PillNavItem(
+      icon: Icons.bar_chart_outlined,
+      selectedIcon: Icons.bar_chart,
+      label: 'Progreso',
+    ),
+    PillNavItem(
+      icon: Icons.restaurant_outlined,
+      selectedIcon: Icons.restaurant,
+      label: 'Nutrición',
+    ),
+    PillNavItem(
+      icon: Icons.person_outline,
+      selectedIcon: Icons.person,
+      label: 'Perfil',
+    ),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return Scaffold(
       body: IndexedStack(index: _index, children: _pages),
-      // Barra flotante en forma de píldora; la pestaña activa va en coral.
-      bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-        child: Container(
-          height: 64,
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainer,
-            borderRadius: BorderRadius.circular(99),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0xB3000000),
-                blurRadius: 32,
-                offset: Offset(0, 12),
-                spreadRadius: -8,
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              for (var i = 0; i < _items.length; i++)
-                Expanded(child: _navItem(context, i)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _navItem(BuildContext context, int i) {
-    final (icon, selectedIcon, label) = _items[i];
-    final selected = i == _index;
-    final color = selected
-        ? Colors.white
-        : Theme.of(context).colorScheme.onSurfaceVariant;
-
-    return Semantics(
-      selected: selected,
-      button: true,
-      label: label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => _select(i),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          height: 48,
-          margin: const EdgeInsets.symmetric(horizontal: 2),
-          decoration: BoxDecoration(
-            color: selected ? AppTheme.coral : Colors.transparent,
-            borderRadius: BorderRadius.circular(99),
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                      color: AppTheme.coral.withValues(alpha: 0.35),
-                      blurRadius: 16,
-                    ),
-                  ]
-                : null,
-          ),
-          // La pestaña seleccionada muestra solo el icono; las demás,
-          // icono y texto. El nombre sigue en Semantics para los lectores
-          // de pantalla.
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                selected ? selectedIcon : icon,
-                size: selected ? 24 : 20,
-                color: color,
-              ),
-              if (!selected) ...[
-                const SizedBox(height: 2),
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.fade,
-                  softWrap: false,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelSmall?.copyWith(color: color),
-                ),
-              ],
-            ],
-          ),
-        ),
+      bottomNavigationBar: PillNavBar(
+        items: _items,
+        selectedIndex: _index,
+        onSelected: _select,
       ),
     );
   }

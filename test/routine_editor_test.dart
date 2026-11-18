@@ -56,6 +56,9 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField).first, 'Fuerza');
+    // Los ejercicios están en un desplegable por músculo.
+    await tester.tap(find.text('Pecho'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byType(CheckboxListTile).first);
     await tester.pump();
     await tester.tap(find.text('Guardar'));

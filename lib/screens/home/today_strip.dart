@@ -4,6 +4,7 @@ import '../../data/app_store.dart';
 import '../../data/stats.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/brand.dart';
+import '../../widgets/coach_badge.dart';
 
 /// Franja de hoy: calorías y agua en dos columnas iguales (título con
 /// icono, cifra y barra), para que las dos barras queden alineadas.
@@ -32,11 +33,32 @@ class TodayStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final kcal = store.macrosFor(DateTime.now()).kcal;
     final kcalGoal = store.macroTargets().kcal;
     final waterGoal = store.waterGoalMl;
 
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _card(context, kcal: kcal, kcalGoal: kcalGoal, waterGoal: waterGoal),
+        // Las calorías las ha fijado el entrenador.
+        if (store.nutritionByCoach)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: CoachBadge(label: store.coachLabel),
+          ),
+      ],
+    );
+  }
+
+  /// La tarjeta con las calorías y el agua de hoy.
+  Widget _card(
+    BuildContext context, {
+    required double kcal,
+    required double kcalGoal,
+    required int waterGoal,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(

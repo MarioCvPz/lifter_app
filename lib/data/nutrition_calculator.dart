@@ -82,8 +82,12 @@ class NutritionCalculator {
   /// - grasa: el [fatCaloriesShare] de las calorías;
   /// - hidratos: las calorías que quedan.
   /// Se redondea solo aquí, al final, para no acumular errores.
-  static DailyMacros macros(UserProfile profile) {
-    final kcal = targetCalories(profile);
+  ///
+  /// Si el entrenador ha fijado las calorías ([kcalOverride]), se usan en
+  /// lugar del cálculo; la proteína, la grasa y los hidratos se calculan
+  /// igual, así que los macros siguen cuadrando.
+  static DailyMacros macros(UserProfile profile, {int? kcalOverride}) {
+    final kcal = kcalOverride?.toDouble() ?? targetCalories(profile);
     final protein = referenceWeightKg(profile) * proteinPerKg;
     final fat = kcal * fatCaloriesShare / kcalPerGramFat;
     final carbsKcal =
@@ -98,4 +102,13 @@ class NutritionCalculator {
       fat: fat.roundToDouble(),
     );
   }
+
+  /// Objetivo diario con las calorías que haya fijado el entrenador
+  /// ([coach]), o el automático si no hay. Lo usan la Nutrición del
+  /// cliente y la lista de clientes del entrenador, así que los dos ven lo
+  /// mismo.
+  static DailyMacros macrosWithCoach(
+    UserProfile profile,
+    CoachSettings? coach,
+  ) => macros(profile, kcalOverride: coach?.kcalTarget);
 }

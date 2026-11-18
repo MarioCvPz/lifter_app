@@ -292,40 +292,58 @@ enum HelpTopic {
     ),
   ]),
 
-  trainer('Cómo funciona el panel de entrenador', [
+  trainer('Cómo funciona el modo entrenador', [
     (
-      Icons.assignment_add,
-      'Asignar rutina',
-      'Pulsa "Asignar rutina", elige el usuario y crea su rutina. Le '
-          'aparecerá en Inicio y en Entrenos, en sus días de entreno, en '
-          'lugar del entreno de su plan.',
+      Icons.swap_horiz,
+      'Usuario | Entrenador',
+      'Con el selector de arriba cambias entre tu app de siempre y el modo '
+          'entrenador. La app recuerda el último modo que usaste.',
+    ),
+    (
+      Icons.key,
+      'Mi código',
+      'Dale tu código a tu cliente (tócalo arriba en Clientes para '
+          'copiarlo): lo escribe en Perfil → Mi entrenador y te envía una '
+          'solicitud. En "Mi perfil de entrenador" puedes generar otro; el '
+          'anterior deja de valer, pero tus clientes siguen contigo.',
+    ),
+    (
+      Icons.person_add_alt,
+      'Solicitudes',
+      'El número sobre el icono son las solicitudes pendientes. Al aceptar '
+          'una, ese usuario pasa a ser tu cliente.',
     ),
     (
       Icons.groups,
-      'Tus usuarios',
-      'Un usuario pasa a ser tuyo cuando le asignas una rutina. Arriba eliges '
-          'el periodo (4, 8 o 12 semanas) y ves sus sesiones, el cumplimiento '
-          '(sesiones hechas frente a sus días por semana) y cuándo entrenó por '
-          'última vez.',
+      'Mis clientes',
+      'Primero salen los que necesitan atención (días sin entrenar, días sin '
+          'apuntar comida o notas sin leer) y después por su nota de la '
+          'semana, de menor a mayor. Filtra o busca por nombre. Tira hacia '
+          'abajo para recargar los datos.',
     ),
     (
       Icons.person_search,
       'Ficha',
-      'Toca un usuario para ver sus sesiones por semana, sus ejercicios más '
-          'hechos y las rutinas que le has asignado.',
+      'Toca un cliente. En Resumen ves su semana, sus últimos entrenos, el '
+          'informe PDF/Excel y sus estadísticas. En Plan cambias sus '
+          'ejercicios y les pones una nota. En Objetivos fijas sus calorías '
+          '(hasta 5.000; los macros se reparten solos) y sus pasos; vacío = '
+          'automático. En el menú ⋮ puedes desvincularlo.',
     ),
     (
-      Icons.download,
-      'Informes',
-      'Con el botón de descarga sacas un Excel (tablas por usuario, por '
-          'semana, entrenos y ejercicios) o un PDF con gráficas del periodo '
-          'elegido.',
+      Icons.chat_bubble_outline,
+      'Notas',
+      'Son los comentarios que tus clientes escriben en sus ejercicios. Las '
+          'nuevas salen primero. Respóndelas desde la pestaña Notas de su '
+          'ficha: tu cliente verá la respuesta en su historial y en el '
+          'entreno.',
     ),
     (
-      Icons.delete_outline,
-      'Asignadas',
-      'En la pestaña "Asignadas" ves todas tus rutinas asignadas. Con la '
-          'papelera borras una; el usuario deja de verla.',
+      Icons.assignment_add,
+      'Asignar rutina',
+      'En el Resumen de un cliente, pulsa "Asignarle otra rutina", elige el '
+          'día de su plan (Día 1, Día 2…) y crea la rutina. Ese día le '
+          'aparecerá en lugar del entreno de su plan; los demás no cambian.',
     ),
   ]),
 

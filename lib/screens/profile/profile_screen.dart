@@ -8,10 +8,11 @@ import '../../models/models.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/brand.dart';
 import '../../widgets/help.dart';
+import '../../widgets/mode_switch.dart';
 import '../admin/admin_screen.dart';
-import '../trainer/trainer_screen.dart';
 import 'body_weight_card.dart';
 import 'edit_profile_screen.dart';
+import 'my_trainer_card.dart';
 import 'training_settings.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -59,6 +60,11 @@ class ProfileScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
+          // Solo entrenadores y admins: pasar al modo entrenador.
+          if (store.isTrainer) ...[
+            const ModeSwitch(),
+            const SizedBox(height: 16),
+          ],
           // --- Cabecera: editar (izquierda), foto y cerrar sesión (derecha) ---
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -116,6 +122,8 @@ class ProfileScreen extends StatelessWidget {
           _InfoRow(user: user),
           const SizedBox(height: 12),
           BodyWeightCard(store: store),
+          const SizedBox(height: 12),
+          MyTrainerCard(store: store),
 
           // --- Ajustes de entrenamiento ---
           const SizedBox(height: 28),
@@ -153,14 +161,6 @@ class ProfileScreen extends StatelessWidget {
 
           // --- Paneles y sesión ---
           const SizedBox(height: 28),
-          if (store.isTrainer) ...[
-            FilledButton.tonalIcon(
-              onPressed: () => _push(context, const TrainerScreen()),
-              icon: const Icon(Icons.sports),
-              label: const Text('Panel de entrenador'),
-            ),
-            const SizedBox(height: 8),
-          ],
           if (store.isAdmin) ...[
             FilledButton.tonalIcon(
               onPressed: () => _push(context, const AdminScreen()),

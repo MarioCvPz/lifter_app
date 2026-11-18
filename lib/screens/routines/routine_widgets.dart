@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../data/catalog.dart';
 import '../../models/models.dart';
 import '../../theme/app_theme.dart';
 import '../workouts/live_workout_screen.dart';
@@ -90,6 +91,17 @@ class _RoutineEditorDialogState extends State<_RoutineEditorDialog> {
     );
   }
 
+  /// Marca o desmarca [exercise] en la rutina.
+  void _toggle(Exercise exercise, bool add) {
+    setState(() {
+      if (add) {
+        _selected.add(exercise);
+      } else {
+        _selected.remove(exercise);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -152,21 +164,13 @@ class _RoutineEditorDialogState extends State<_RoutineEditorDialog> {
                   'El catálogo de ejercicios está vacío. Un admin tiene que '
                   'cargarlo desde Administración.',
                 ),
-              for (final ex in widget.exercises)
-                CheckboxListTile(
-                  dense: true,
-                  value: _selected.contains(ex),
-                  title: Text(ex.name),
-                  subtitle: Text(ex.muscleGroup),
-                  onChanged: (v) {
-                    setState(() {
-                      if (v == true) {
-                        _selected.add(ex);
-                      } else {
-                        _selected.remove(ex);
-                      }
-                    });
-                  },
+              // Un desplegable por grupo muscular, como en "Sustituir".
+              for (final group in exercisesByMuscle(widget.exercises).entries)
+                _MuscleGroupTile(
+                  group: group.key,
+                  exercises: group.value,
+                  selected: _selected,
+                  onChanged: _toggle,
                 ),
             ],
           ),
@@ -184,6 +188,54 @@ class _RoutineEditorDialogState extends State<_RoutineEditorDialog> {
               : _save,
           child: const Text('Guardar'),
         ),
+      ],
+    );
+  }
+}
+
+/// Desplegable de un grupo muscular del editor de rutinas: al abrirlo se
+/// ven sus ejercicios con una casilla. Debajo del nombre dice cuántos hay
+/// elegidos de ese grupo, para verlo sin abrirlo.
+class _MuscleGroupTile extends StatelessWidget {
+  const _MuscleGroupTile({
+    required this.group,
+    required this.exercises,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final String group;
+  final List<Exercise> exercises;
+  final List<Exercise> selected;
+  final void Function(Exercise exercise, bool add) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final chosen = exercises.where(selected.contains).length;
+    return ExpansionTile(
+      tilePadding: EdgeInsets.zero,
+      title: Text(group),
+      subtitle: Text(
+        chosen == 0
+            ? '${exercises.length} ejercicios'
+            : '$chosen de ${exercises.length} elegidos',
+        style: TextStyle(
+          color: chosen == 0 ? scheme.onSurfaceVariant : scheme.primary,
+        ),
+      ),
+      // Sin las líneas que ExpansionTile dibuja por defecto al abrirse.
+      shape: const Border(),
+      collapsedShape: const Border(),
+      children: [
+        for (final ex in exercises)
+          CheckboxListTile(
+            dense: true,
+            value: selected.contains(ex),
+            title: Text(ex.name),
+            subtitle: Text(ex.equipment),
+            onChanged: (v) => onChanged(ex, v ?? false),
+          ),
       ],
     );
   }

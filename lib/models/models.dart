@@ -634,6 +634,7 @@ class UserProfile {
     this.injuries = const [],
     this.onboardingCompleted = false,
     this.stepsGoal = defaultStepsGoal,
+    this.trainerCode,
   });
 
   /// Objetivo de pasos diario si el perfil no tiene uno.
@@ -679,6 +680,10 @@ class UserProfile {
 
   /// Pasos al día que quiere alcanzar (para la pestaña Progreso).
   int stepsGoal;
+
+  /// Código activo de un entrenador (`trainerCodes/{code}`), o null si no
+  /// es entrenador o aún no ha abierto "Mi código".
+  String? trainerCode;
 
   /// Edad en años, o `null` mientras no haya fecha de nacimiento.
   int? get age {
@@ -747,6 +752,7 @@ class UserProfile {
     onboardingCompleted: m['onboardingCompleted'] as bool? ?? false,
     // Los perfiles de antes de la pestaña Progreso no tienen objetivo.
     stepsGoal: (m['stepsGoal'] as num?)?.toInt() ?? defaultStepsGoal,
+    trainerCode: m['trainerCode'] as String?,
   );
 
   Map<String, dynamic> toMap() {
@@ -771,6 +777,7 @@ class UserProfile {
       'injuries': injuries,
       'onboardingCompleted': onboardingCompleted,
       'stepsGoal': stepsGoal,
+      'trainerCode': trainerCode,
     };
   }
 }
@@ -794,6 +801,7 @@ class AssignedRoutine {
     required this.userId,
     required this.userName,
     required this.createdAt,
+    this.dayNumber,
   });
 
   final String id;
@@ -803,6 +811,17 @@ class AssignedRoutine {
   final String userId;
   final String userName;
   final DateTime createdAt;
+
+  /// Día del plan del cliente en el que va la rutina, por orden: 1 = su
+  /// primer día de entreno de la semana, 2 = el segundo… Se guarda el orden
+  /// y no el día de la semana para que siga valiendo si el cliente cambia
+  /// qué días entrena. Null en las asignaciones antiguas, que iban en todos
+  /// los días de entreno.
+  final int? dayNumber;
+
+  /// "Día 2", o "Todos los días" en las asignaciones antiguas.
+  String get dayLabel =>
+      dayNumber == null ? 'Todos los días' : 'Día $dayNumber';
 
   factory AssignedRoutine.fromMap(String id, Map<String, dynamic> m) {
     final routine = Routine.fromMap(id, m);
@@ -820,6 +839,7 @@ class AssignedRoutine {
       userId: m['userId'] as String,
       userName: m['userName'] as String? ?? '',
       createdAt: (m['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      dayNumber: (m['dayNumber'] as num?)?.toInt(),
     );
   }
 
@@ -830,6 +850,7 @@ class AssignedRoutine {
     'userId': userId,
     'userName': userName,
     'createdAt': Timestamp.fromDate(createdAt),
+    'dayNumber': ?dayNumber,
   };
 }
 
@@ -883,6 +904,8 @@ class PlanExercise {
     required this.maxReps,
     required this.restSeconds,
     this.isCustom = false,
+    this.byTrainer = false,
+    this.trainerNote,
   });
 
   /// Copia del ejercicio, como en los entrenos: si el admin lo cambia o lo
@@ -893,9 +916,38 @@ class PlanExercise {
   final int maxReps;
   final int restSeconds;
 
-  /// True si lo ha añadido o sustituido el usuario: se conserva al
-  /// actualizar el plan.
+  /// True si lo ha añadido o sustituido el usuario (o su entrenador): se
+  /// conserva al actualizar el plan.
   final bool isCustom;
+
+  /// True si lo ha añadido o cambiado el entrenador. Siempre va con
+  /// [isCustom], para que el generador no lo quite.
+  final bool byTrainer;
+
+  /// Nota del entrenador para este ejercicio, o null si no hay.
+  final String? trainerNote;
+
+  /// Copia con los campos indicados cambiados. [trainerNote] usa una
+  /// función para poder ponerlo a null (borrar la nota):
+  /// `copyWith(trainerNote: () => null)`.
+  PlanExercise copyWith({
+    int? sets,
+    int? minReps,
+    int? maxReps,
+    int? restSeconds,
+    bool? isCustom,
+    bool? byTrainer,
+    String? Function()? trainerNote,
+  }) => PlanExercise(
+    exercise: exercise,
+    sets: sets ?? this.sets,
+    minReps: minReps ?? this.minReps,
+    maxReps: maxReps ?? this.maxReps,
+    restSeconds: restSeconds ?? this.restSeconds,
+    isCustom: isCustom ?? this.isCustom,
+    byTrainer: byTrainer ?? this.byTrainer,
+    trainerNote: trainerNote == null ? this.trainerNote : trainerNote(),
+  );
 
   factory PlanExercise.fromMap(Map<String, dynamic> m) => PlanExercise(
     exercise: Exercise.fromMap(Map<String, dynamic>.from(m['exercise'])),
@@ -904,6 +956,9 @@ class PlanExercise {
     maxReps: (m['maxReps'] as num?)?.toInt() ?? 12,
     restSeconds: (m['restSeconds'] as num?)?.toInt() ?? 90,
     isCustom: m['isCustom'] as bool? ?? false,
+    // Los planes de antes del entrenador no tienen estos campos.
+    byTrainer: m['byTrainer'] as bool? ?? false,
+    trainerNote: m['trainerNote'] as String?,
   );
 
   Map<String, dynamic> toMap() => {
@@ -913,6 +968,8 @@ class PlanExercise {
     'maxReps': maxReps,
     'restSeconds': restSeconds,
     'isCustom': isCustom,
+    'byTrainer': byTrainer,
+    'trainerNote': trainerNote,
   };
 }
 
@@ -976,6 +1033,16 @@ class PlanDay {
       ...removedExerciseIds,
       oldId,
     }.where((id) => id != replacement.exercise.id),
+  );
+
+  /// El día con [changed] en el lugar del ejercicio con su mismo id (por
+  /// ejemplo, con otras series o una nota).
+  PlanDay updating(PlanExercise changed) => _copy(
+    exercises: [
+      for (final e in exercises)
+        e.exercise.id == changed.exercise.id ? changed : e,
+    ],
+    removed: removedExerciseIds,
   );
 
   PlanDay _copy({
@@ -1047,5 +1114,203 @@ class TrainingPlan {
   Map<String, dynamic> toMap() => {
     'generatedAt': Timestamp.fromDate(generatedAt),
     'days': [for (final d in days) d.toMap()],
+  };
+}
+
+/// Estado de una solicitud de entrenador. "Sin entrenador" no se guarda:
+/// es que no existe el documento `trainerLinks/{clientId}`.
+enum LinkStatus {
+  pending('Pendiente'),
+  accepted('Vinculado');
+
+  const LinkStatus(this.label);
+  final String label;
+
+  static LinkStatus fromName(String? name) {
+    return LinkStatus.values.firstWhere(
+      (s) => s.name == name,
+      orElse: () => LinkStatus.pending,
+    );
+  }
+}
+
+/// Vínculo entre un cliente y su entrenador (`trainerLinks/{clientId}`).
+/// El id del documento es el uid del cliente, así que solo puede tener uno.
+/// Es inmutable: aceptar devuelve un vínculo nuevo.
+class TrainerLink {
+  const TrainerLink({
+    required this.clientId,
+    required this.clientName,
+    required this.trainerId,
+    required this.trainerName,
+    required this.code,
+    required this.status,
+    required this.createdAt,
+  });
+
+  final String clientId;
+  final String clientName;
+  final String trainerId;
+  final String trainerName;
+
+  /// Código con el que se envió la solicitud.
+  final String code;
+  final LinkStatus status;
+  final DateTime createdAt;
+
+  bool get isPending => status == LinkStatus.pending;
+  bool get isAccepted => status == LinkStatus.accepted;
+
+  /// El mismo vínculo, ya aceptado por el entrenador.
+  TrainerLink accept() => TrainerLink(
+    clientId: clientId,
+    clientName: clientName,
+    trainerId: trainerId,
+    trainerName: trainerName,
+    code: code,
+    status: LinkStatus.accepted,
+    createdAt: createdAt,
+  );
+
+  factory TrainerLink.fromMap(Map<String, dynamic> m) => TrainerLink(
+    clientId: m['clientId'] as String? ?? '',
+    clientName: m['clientName'] as String? ?? '',
+    trainerId: m['trainerId'] as String? ?? '',
+    trainerName: m['trainerName'] as String? ?? 'Entrenador',
+    code: m['code'] as String? ?? '',
+    status: LinkStatus.fromName(m['status'] as String?),
+    createdAt: (m['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+  );
+
+  Map<String, dynamic> toMap() => {
+    'clientId': clientId,
+    'clientName': clientName,
+    'trainerId': trainerId,
+    'trainerName': trainerName,
+    'code': code,
+    'status': status.name,
+    'createdAt': Timestamp.fromDate(createdAt),
+  };
+}
+
+/// Objetivos que el entrenador pone a su cliente
+/// (`users/{clientId}/coach/settings`): calorías y pasos. Un campo null
+/// significa "usa el cálculo automático". Los macros (proteína, grasa e
+/// hidratos) no los fija el entrenador: la app los reparte a partir de las
+/// calorías, igual que en el cálculo automático.
+class CoachSettings {
+  const CoachSettings({this.kcalTarget, this.stepsGoal});
+
+  static const minKcal = 1000;
+
+  /// Más no es saludable.
+  static const maxKcal = 5000;
+
+  final int? kcalTarget;
+  final int? stepsGoal;
+
+  /// True si no ajusta nada (todo automático).
+  bool get isEmpty => kcalTarget == null && stepsGoal == null;
+
+  /// True si cambia las calorías.
+  bool get adjustsNutrition => kcalTarget != null;
+
+  /// Mensaje de error si algún valor está fuera de rango, o null. Los null
+  /// (automático) siempre valen.
+  String? validate() {
+    final kcal = kcalTarget;
+    if (kcal != null && (kcal < minKcal || kcal > maxKcal)) {
+      return 'Las calorías tienen que estar entre 1.000 y 5.000 kcal.';
+    }
+    final steps = stepsGoal;
+    return steps == null ? null : UserProfile.validateStepsGoal(steps);
+  }
+
+  /// Si un documento antiguo trae otros campos (como `proteinTarget`), se
+  /// ignoran.
+  factory CoachSettings.fromMap(Map<String, dynamic> m) => CoachSettings(
+    kcalTarget: (m['kcalTarget'] as num?)?.toInt(),
+    stepsGoal: (m['stepsGoal'] as num?)?.toInt(),
+  );
+
+  Map<String, dynamic> toMap() => {
+    'kcalTarget': kcalTarget,
+    'stepsGoal': stepsGoal,
+    'updatedAt': Timestamp.now(),
+  };
+}
+
+/// Lo que el entrenador hace con una nota (comentario) que su cliente dejó
+/// en un ejercicio: marcarla como leída y, si quiere, responderla. Se
+/// guarda en `users/{clientId}/coachReplies/{id}`, un documento por nota,
+/// con el id de [idFor]. Así el cliente lee sus respuestas con una sola
+/// escucha y el entrenador sabe qué notas no ha leído (las que no tienen
+/// documento o tienen [readAt] a null).
+class CoachReply {
+  const CoachReply({
+    required this.workoutId,
+    required this.exerciseIndex,
+    required this.exerciseId,
+    this.reply,
+    this.readAt,
+  });
+
+  /// Texto máximo de una respuesta.
+  static const maxLength = 300;
+
+  final String workoutId;
+
+  /// Posición del ejercicio dentro del entreno (los entrenos guardados no
+  /// cambian, así que identifica el ejercicio aunque se repita).
+  final int exerciseIndex;
+  final String exerciseId;
+
+  /// Respuesta del entrenador, o null si solo la ha leído.
+  final String? reply;
+
+  /// Cuándo la leyó el entrenador, o null si aún no.
+  final DateTime? readAt;
+
+  String get id => idFor(workoutId, exerciseIndex);
+  bool get isRead => readAt != null;
+
+  /// Id del documento de la nota del ejercicio [exerciseIndex] del entreno
+  /// [workoutId], por ejemplo "abc123_2".
+  static String idFor(String workoutId, int exerciseIndex) =>
+      '${workoutId}_$exerciseIndex';
+
+  /// Mensaje de error si la respuesta no es válida, o null si lo es.
+  static String? validate(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return 'Escribe una respuesta.';
+    if (trimmed.length > maxLength) {
+      return 'Como mucho $maxLength caracteres.';
+    }
+    return null;
+  }
+
+  CoachReply copyWith({String? reply, DateTime? readAt}) => CoachReply(
+    workoutId: workoutId,
+    exerciseIndex: exerciseIndex,
+    exerciseId: exerciseId,
+    reply: reply ?? this.reply,
+    readAt: readAt ?? this.readAt,
+  );
+
+  factory CoachReply.fromMap(Map<String, dynamic> m) => CoachReply(
+    workoutId: m['workoutId'] as String? ?? '',
+    exerciseIndex: (m['exerciseIndex'] as num?)?.toInt() ?? 0,
+    exerciseId: m['exerciseId'] as String? ?? '',
+    reply: m['reply'] as String?,
+    readAt: (m['readAt'] as Timestamp?)?.toDate(),
+  );
+
+  Map<String, dynamic> toMap() => {
+    'workoutId': workoutId,
+    'exerciseIndex': exerciseIndex,
+    'exerciseId': exerciseId,
+    'reply': ?reply,
+    if (readAt case final read?) 'readAt': Timestamp.fromDate(read),
+    'updatedAt': Timestamp.now(),
   };
 }

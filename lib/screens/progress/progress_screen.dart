@@ -4,6 +4,7 @@ import '../../data/app_store.dart';
 import '../../data/stats.dart';
 import '../../data/week_summary.dart';
 import '../../widgets/brand.dart';
+import '../../widgets/coach_badge.dart';
 import '../../widgets/help.dart';
 import 'nutrition_week_card.dart';
 import 'score_card.dart';
@@ -73,6 +74,16 @@ class _ProgressScreenState extends State<ProgressScreen> {
           NutritionWeekCard(summary: summary),
           const SizedBox(height: 12),
           StepsWeightRow(summary: summary, store: store),
+          // Objetivo de pasos o calorías fijados por el entrenador.
+          if (store.stepsByCoach || store.nutritionByCoach) ...[
+            const SizedBox(height: 8),
+            CoachBadge(
+              label: store.coachLabel,
+              onReset: store.hasAcceptedTrainer
+                  ? null
+                  : store.resetMyCoachSettings,
+            ),
+          ],
         ],
       ),
     );

@@ -131,7 +131,7 @@ class _RoutinesScreenState extends State<RoutinesScreen> {
             for (final a in fromTrainer)
               RoutineCard(
                 routine: a.routine,
-                caption: 'Asignada por ${a.trainerName}',
+                caption: 'Asignada por ${a.trainerName} · ${a.dayLabel}',
               ),
           ],
           if (templates.isNotEmpty) ...[

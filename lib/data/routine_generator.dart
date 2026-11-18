@@ -624,7 +624,7 @@ class RoutineGenerator {
             'porque ya no tienes día de ${oldDay.name}.',
           );
         }
-        _addCustom(exercisesByDay[day], kept, profile);
+        _addCustom(exercisesByDay[day], kept, profile, previous: custom);
       }
     }
 
@@ -699,13 +699,21 @@ class RoutineGenerator {
 
   /// Añade un ejercicio del usuario al día. Si el generador ya lo había
   /// puesto, solo lo marca como del usuario para no repetirlo.
+  /// Si lo puso el entrenador ([PlanExercise.byTrainer]) y sigue siendo el
+  /// mismo ejercicio, se conserva tal cual: sus series, repeticiones,
+  /// descanso y nota mandan sobre el cálculo automático.
   static void _addCustom(
     List<PlanExercise> dayExercises,
     Exercise exercise,
-    UserProfile profile,
-  ) {
+    UserProfile profile, {
+    required PlanExercise previous,
+  }) {
     dayExercises.removeWhere((e) => e.exercise.id == exercise.id);
-    dayExercises.add(prescribe(exercise, profile, isCustom: true));
+    final keepTrainer =
+        previous.byTrainer && previous.exercise.id == exercise.id;
+    dayExercises.add(
+      keepTrainer ? previous : prescribe(exercise, profile, isCustom: true),
+    );
   }
 
   static List<PlanExercise> _compoundsFirstInPlan(List<PlanExercise> list) => [

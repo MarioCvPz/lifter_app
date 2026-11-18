@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../data/app_store.dart';
+import '../../data/formatters.dart';
 import '../../models/models.dart';
 import '../onboarding/onboarding_widgets.dart';
 
@@ -63,7 +65,43 @@ class _StepsGoalStepState extends State<StepsGoalStep> {
           decoration: const InputDecoration(suffixText: 'pasos al día'),
           onChanged: _onTextChanged,
         ),
+        const _CoachStepsNote(),
       ],
+    );
+  }
+}
+
+/// Aviso si el objetivo que se usa lo ha puesto el entrenador. Con
+/// entrenador, manda el suyo; sin él, guardar uno nuevo lo sustituye
+/// (ver `AppStore.saveTrainingProfile`).
+class _CoachStepsNote extends StatelessWidget {
+  const _CoachStepsNote();
+
+  @override
+  Widget build(BuildContext context) {
+    final store = SessionScope.of(context);
+    final coachGoal = store.coachSettings?.stepsGoal;
+    if (coachGoal == null) return const SizedBox.shrink();
+    final goal = formatThousands(coachGoal);
+    final text = store.hasAcceptedTrainer
+        ? 'Tu entrenador te ha puesto $goal pasos al día y es el que se usa '
+              'en Progreso.'
+        : 'Tu entrenador anterior te puso $goal pasos al día. Si guardas '
+              'uno nuevo, se usará el tuyo.';
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.sports,
+            size: 18,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text)),
+        ],
+      ),
     );
   }
 }

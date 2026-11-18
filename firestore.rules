@@ -4,11 +4,17 @@ rules_version = '2';
 // - Nadie puede ponerse ni cambiarse el rol desde la app.
 // - Solo un admin puede cambiar el rol de otro usuario.
 // - El primer admin se pone a mano desde la consola de Firebase.
+// Entrenador y cliente se vinculan con un código (trainerCodes) y una
+// solicitud que el entrenador acepta (trainerLinks).
 service cloud.firestore {
   match /databases/{database}/documents {
 
     function signedIn() {
       return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
     }
 
     function myRole() {
@@ -32,9 +38,26 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys();
     }
 
+    function linkPath(uid) {
+      return /databases/$(database)/documents/trainerLinks/$(uid);
+    }
+
+    // El usuario tiene un entrenador que ya aceptó su solicitud.
+    function hasAcceptedTrainer(uid) {
+      return exists(linkPath(uid))
+        && get(linkPath(uid)).data.status == 'accepted';
+    }
+
+    // uid es cliente vinculado (aceptado) del entrenador que hace la petición.
+    function isMyClient(uid) {
+      return isTrainer() && hasAcceptedTrainer(uid)
+        && get(linkPath(uid)).data.trainerId == request.auth.uid;
+    }
+
     match /users/{uid} {
-      // Cada uno ve su perfil; entrenadores y admins ven la lista de usuarios.
-      allow read: if signedIn() && (request.auth.uid == uid || isTrainer());
+      // Cada uno ve su perfil; un entrenador, solo el de sus clientes;
+      // los admins, todos.
+      allow read: if isSelf(uid) || isAdmin() || isMyClient(uid);
 
       // Al registrarse, el perfil no puede traer rol.
       allow create: if signedIn() && request.auth.uid == uid
@@ -51,16 +74,31 @@ service cloud.firestore {
 
       allow delete: if false;
 
-      // Entrenos, rutinas propias y nutrición: solo el dueño (y admins leen).
-      match /{document=**} {
-        allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
-        allow write: if signedIn() && request.auth.uid == uid;
+      // Entrenos, rutinas, nutrición, plan, peso, pasos…: el dueño los
+      // escribe (menos `coach` y `coachReplies`); los leen él, su entrenador y los admins.
+      // Así el entrenador sigue viendo los comentarios de los entrenos.
+      match /{collection}/{docId=**} {
+        allow read: if isSelf(uid) || isAdmin() || isMyClient(uid);
+        allow write: if isSelf(uid)
+          && !(collection in ['coach', 'coachReplies']);
       }
 
-      // Los entrenadores ven los entrenos (no la nutrición) para sacar las
-      // estadísticas e informes de sus usuarios.
-      match /workouts/{workoutId} {
-        allow read: if isTrainer();
+      // Notas leídas y respuestas del entrenador a los comentarios de su
+      // cliente: solo las escribe él; el cliente las lee (regla de arriba).
+      match /coachReplies/{noteId} {
+        allow write: if isMyClient(uid);
+      }
+
+      // El entrenador puede cambiar el plan de su cliente.
+      match /plan/current {
+        allow write: if isMyClient(uid);
+      }
+
+      // Objetivos que pone el entrenador. El cliente solo puede tocarlos
+      // ("Volver al automático") cuando ya no tiene entrenador aceptado.
+      match /coach/settings {
+        allow write: if isMyClient(uid)
+          || (isSelf(uid) && !hasAcceptedTrainer(uid));
       }
     }
 
@@ -84,7 +122,46 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Rutinas que un entrenador asigna a un usuario.
+    // Código de un entrenador. Se lee por su id (no se pueden listar todos).
+    // No hay `update`: si el código ya existe, crearlo falla y la app
+    // prueba con otro.
+    match /trainerCodes/{code} {
+      allow get: if signedIn();
+      allow create: if isTrainer() && code.size() == 6
+        && request.resource.data.trainerId == request.auth.uid;
+      allow delete: if isTrainer()
+        && resource.data.trainerId == request.auth.uid;
+    }
+
+    // Vínculo cliente–entrenador. El id es el uid del cliente: solo uno.
+    match /trainerLinks/{clientId} {
+      // isSelf va primero para que el cliente pueda leer su vínculo aunque
+      // aún no exista (sin solicitud).
+      allow read: if isSelf(clientId) || isAdmin()
+        || (signedIn() && resource.data.trainerId == request.auth.uid);
+
+      // Solicitud: la crea el propio cliente, pendiente y con el
+      // entrenador al que pertenece el código.
+      allow create: if isSelf(clientId)
+        && request.resource.data.clientId == clientId
+        && request.resource.data.status == 'pending'
+        && request.resource.data.trainerId != clientId
+        && exists(/databases/$(database)/documents/trainerCodes/$(request.resource.data.code))
+        && request.resource.data.trainerId == get(/databases/$(database)/documents/trainerCodes/$(request.resource.data.code)).data.trainerId;
+
+      // Aceptar: solo su entrenador, y solo de pending a accepted.
+      allow update: if isTrainer()
+        && resource.data.trainerId == request.auth.uid
+        && resource.data.status == 'pending'
+        && request.resource.data.status == 'accepted'
+        && changedKeys().hasOnly(['status']);
+
+      // Rechazar, cancelar o desvincular: el cliente o su entrenador.
+      allow delete: if isSelf(clientId)
+        || (signedIn() && resource.data.trainerId == request.auth.uid);
+    }
+
+    // Rutinas que un entrenador asigna a sus clientes.
     match /assignedRoutines/{id} {
       allow read: if signedIn() && (
         resource.data.userId == request.auth.uid
@@ -92,7 +169,8 @@ service cloud.firestore {
         || isAdmin()
       );
       allow create: if isTrainer()
-        && request.resource.data.trainerId == request.auth.uid;
+        && request.resource.data.trainerId == request.auth.uid
+        && isMyClient(request.resource.data.userId);
       allow update, delete: if (isTrainer()
         && resource.data.trainerId == request.auth.uid) || isAdmin();
     }
